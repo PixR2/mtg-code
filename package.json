@@ -35,12 +35,7 @@
                 "path": "./syntaxes/mtg.tmLanguage.json"
             }
         ],
-        "commands": [
-            {
-                "command": "extension.sayHello",
-                "title": "Hello World"
-            }
-        ]
+        "commands": []
     },
     "scripts": {
         "copy:dist": "mkdir -p out/carddb && cp carddb/AllCards.json out/carddb",

@@ -8,6 +8,10 @@ import * as fs from 'fs';
 import * as resizeImg from 'resize-img';
 import * as fuzzy from 'fuzzy';
 
+let allCards = {};
+
+let diagnosticCollection: vscode.DiagnosticCollection;
+
 class CardHoverProvider implements vscode.HoverProvider {
     public async provideHover(
         document: vscode.TextDocument,
@@ -57,9 +61,6 @@ class CardHoverProvider implements vscode.HoverProvider {
 class CardCompletionItemProvider implements vscode.CompletionItemProvider {
     cardNames: string[];
     constructor() {
-        var rawAllCards = fs.readFileSync(`${__dirname}/carddb/AllCards.json`);
-        var allCards = JSON.parse(rawAllCards.toString());
-
         this.cardNames = Object.getOwnPropertyNames(allCards);
     }
 
@@ -97,26 +98,68 @@ class CardCompletionItemProvider implements vscode.CompletionItemProvider {
 
 var nCardsMsg: vscode.Disposable;
 
-function countAllCards(e: vscode.TextDocumentChangeEvent) {
-    let regexp: RegExp = new RegExp('^(\\d+) .*$');
-    const cardCounts: number[] = [];
+function runDiagnostics(e: vscode.TextDocumentChangeEvent) {
+    console.log("running diagnostics...");
+
+    let diagnostics: vscode.Diagnostic[] = [];
+
+    let regexp: RegExp = new RegExp('^(\\d+) (.*)$');
+    const cardStats = {};
     for (let i = 0; i < e.document.lineCount; i++) {
         const lineStr: string = e.document.lineAt(i).text;
         const search = regexp.exec(lineStr);
         if (search) {
-            cardCounts.push(parseInt(search[1]));
+            let cardNameStart = lineStr.search(search[2]);
+            let cardData = allCards[search[2]];
+            if (!cardData) {
+                diagnostics.push(new vscode.Diagnostic(new vscode.Range(new vscode.Position(i, cardNameStart), new vscode.Position(i, lineStr.length)), "unknown card '" + search[2] + "'"));
+            }
+
+            if (!cardStats[search[2]]) {
+                cardStats[search[2]] = {
+                    count: 0,
+                    lines: [],
+                    cardNameStart: cardNameStart,
+                    cardData: cardData
+                };
+            }
+
+            cardStats[search[2]].count += parseInt(search[1]);
+            cardStats[search[2]].lines.push(i);
         }
     }
 
-    let totalCards = 0;
-    cardCounts.forEach(c => totalCards += c);
+    let totalCardCount = 0;
+    let cardNames = Object.getOwnPropertyNames(cardStats);
+    for (let c = 0; c < cardNames.length; c++) {
+        let cardName = cardNames[c];
+        let card = cardStats[cardName];
+
+        
+
+        if (card.count > 4 && !card.cardData.types.includes("Land") && cardName !== "Relentless Rats") {
+            for (let l = 0; l < card.lines.length; l++) {
+                let line = card.lines[l];
+                diagnostics.push(new vscode.Diagnostic(new vscode.Range(new vscode.Position(line, 0), new vscode.Position(line, card.cardNameStart-1)), "too many copies of '" + cardName + "'"));
+            }
+        }
+
+        totalCardCount += card.count;
+    }
 
     if (nCardsMsg) {
         nCardsMsg.dispose();
     }
 
-    nCardsMsg = vscode.window.setStatusBarMessage("#cards: " + totalCards.toString());
+    if (totalCardCount < 60) {
+        nCardsMsg = vscode.window.setStatusBarMessage("#cards: " + totalCardCount.toString() + ", need at least 60");
+    } else {
+        nCardsMsg = vscode.window.setStatusBarMessage("#cards: " + totalCardCount.toString());
+    }
+
+    diagnosticCollection.set(e.document.uri, diagnostics);
 }
+
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -130,22 +173,18 @@ export function activate(context: vscode.ExtensionContext) {
     fs.mkdir(`${__dirname}/img-cache`);
     fs.mkdir(`${__dirname}/card-cache`);
 
-    // The command has been defined in the package.json file
-    // Now provide the implementation of the command with  registerCommand
-    // The commandId parameter must match the command field in package.json
-    context.subscriptions.push(vscode.commands.registerCommand('extension.sayHello', () => {
-        // The code you place here will be executed every time your command is executed
-
-        // Display a message box to the user
-        vscode.window.showInformationMessage('Hello World!');
-    }));
+    var rawAllCards = fs.readFileSync(`${__dirname}/carddb/AllCards.json`);
+    allCards = JSON.parse(rawAllCards.toString());
 
     context.subscriptions.push(vscode.languages.registerHoverProvider('mtg', new CardHoverProvider()));
 
     const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz '\"".split("");
     context.subscriptions.push(vscode.languages.registerCompletionItemProvider('mtg', new CardCompletionItemProvider(), ...alphabet));
 
-    context.subscriptions.push(vscode.workspace.onDidChangeTextDocument(countAllCards));
+    diagnosticCollection = vscode.languages.createDiagnosticCollection('mtg');
+    context.subscriptions.push(diagnosticCollection);
+
+    context.subscriptions.push(vscode.workspace.onDidChangeTextDocument(runDiagnostics));
 }
 
 // this method is called when your extension is deactivated
