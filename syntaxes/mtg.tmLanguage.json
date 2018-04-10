@@ -1,0 +1,30 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "mtg",
+	"patterns": [
+		{
+			"include": "#sections"
+		},
+		{
+			"include": "#cardlines"
+		}
+	],
+	"repository": {
+		"sections": {
+			"patterns": [{
+				"name": "markup.heading.mtg",
+				"match": "(\/\/.*)"
+			}]
+		},
+		"cardlines": {
+			"patterns": [{
+				"match": "(\\d+) (.+)",
+				"captures": {
+					"1": {"name": "constant.numeric.mtg"},
+					"2": {"name": "markup.italic.mtg"}
+				}
+			}]
+		}
+	},
+	"scopeName": "source.mtg"
+}
