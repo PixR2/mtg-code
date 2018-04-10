@@ -6,7 +6,7 @@ import * as request from "web-request";
 import * as imgDownload from 'image-download';
 import * as fs from 'fs';
 import * as resizeImg from 'resize-img';
-import * as fuzzy from 'fuzzy'
+import * as fuzzy from 'fuzzy';
 
 class CardHoverProvider implements vscode.HoverProvider {
     public async provideHover(
