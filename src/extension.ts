@@ -63,21 +63,36 @@ class CardCompletionItemProvider implements vscode.CompletionItemProvider {
         this.cardNames = Object.getOwnPropertyNames(allCards);
     }
 
-    public async  provideCompletionItems(
+    public async provideCompletionItems(
         document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken):
         Promise<vscode.CompletionItem[]> {
-        let regexp: RegExp = new RegExp('^\\d+ (.*)$');
-        let search = regexp.exec(document.lineAt(position.line).text);
-        if (!search || search.length !== 2) {
+        let regexp: RegExp = new RegExp('^(\\d+ )(.*)$');
+        let line = document.lineAt(position.line);
+        let lineStr = line.text;
+        let search = regexp.exec(lineStr);
+        if (!search || search.length !== 3) {
             return undefined;
         }
 
-        let matches = fuzzy.filter(search[1], this.cardNames);
-        matches.sort(function (a, b) {
-            return a.score - b.score;
+        console.log("search: " + search);
+        let insertAt = lineStr.search(search[2]);
+        console.log("insertAt: " + insertAt.toString());
+
+        let matches = fuzzy.filter(search[2], this.cardNames);
+        // matches.sort(function (a, b) {
+        //     return a.score - b.score;
+        // });
+        return matches.map((res) => {
+            let item: vscode.CompletionItem = new vscode.CompletionItem(res.string);
+            item.range = new vscode.Range(new vscode.Position(position.line, insertAt), line.range.end);
+            item.label = res.string;
+            // item.range = new vscode.Range(new vscode.Position(position.line, insertAt), line.range.end);
+            return item;
         });
-        return matches.map(res => new vscode.CompletionItem(res.string));
     }
+
+    // public resolveCompletionItem(item: vscode.CompletionItem, token: vscode.CancellationToken): vscode.ProviderResult<vscode.CompletionItem> {
+    // }
 }
 
 // this method is called when your extension is activated
@@ -105,7 +120,6 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.languages.registerHoverProvider('mtg', new CardHoverProvider());
 
     const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz '\"".split("");
-    console.log(alphabet);
     vscode.languages.registerCompletionItemProvider('mtg', new CardCompletionItemProvider(), ...alphabet);
 
     // context.subscriptions.push(vscode.languages.registerHoverProvider("mtg",
