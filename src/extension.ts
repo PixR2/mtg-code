@@ -95,6 +95,29 @@ class CardCompletionItemProvider implements vscode.CompletionItemProvider {
     // }
 }
 
+var nCardsMsg: vscode.Disposable;
+
+function countAllCards(e: vscode.TextDocumentChangeEvent) {
+    let regexp: RegExp = new RegExp('^(\\d+) .*$');
+    const cardCounts: number[] = [];
+    for (let i = 0; i < e.document.lineCount; i++) {
+        const lineStr: string = e.document.lineAt(i).text;
+        const search = regexp.exec(lineStr);
+        if (search) {
+            cardCounts.push(parseInt(search[1]));
+        }
+    }
+
+    let totalCards = 0;
+    cardCounts.forEach(c => totalCards += c);
+
+    if (nCardsMsg) {
+        nCardsMsg.dispose();
+    }
+
+    nCardsMsg = vscode.window.setStatusBarMessage("#cards: " + totalCards.toString());
+}
+
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
@@ -117,18 +140,12 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.window.showInformationMessage('Hello World!');
     }));
 
-    vscode.languages.registerHoverProvider('mtg', new CardHoverProvider());
+    context.subscriptions.push(vscode.languages.registerHoverProvider('mtg', new CardHoverProvider()));
 
     const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz '\"".split("");
-    vscode.languages.registerCompletionItemProvider('mtg', new CardCompletionItemProvider(), ...alphabet);
+    context.subscriptions.push(vscode.languages.registerCompletionItemProvider('mtg', new CardCompletionItemProvider(), ...alphabet));
 
-    // context.subscriptions.push(vscode.languages.registerHoverProvider("mtg",
-    //     {
-    //         provideHover(document, position, token) {
-    //             return new vscode.Hover('I am a hover!');
-    //         }
-    //     }
-    // ));
+    context.subscriptions.push(vscode.workspace.onDidChangeTextDocument(countAllCards));
 }
 
 // this method is called when your extension is deactivated
