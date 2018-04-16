@@ -38,7 +38,7 @@
         "commands": []
     },
     "scripts": {
-        "copy:dist": "mkdir -p out/carddb && mkdir -p out/mana-icons && cp carddb/AllCards.json out/carddb && cp mana-icons/* out/mana-icons",
+        "copy:dist": "mkdir -p out/carddb && cp carddb/AllCards.json out/carddb",
         "vscode:prepublish": "npm run compile",
         "compile": "npm run copy:dist && tsc -p ./",
         "watch": "npm run copy:dist && tsc -watch -p ./",
