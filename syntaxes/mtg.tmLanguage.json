@@ -6,7 +6,10 @@
 			"include": "#sections"
 		},
 		{
-			"include": "#cardlines"
+			"include": "#complete_cardlines"
+		},
+		{
+			"include": "#incomplete_cardlines"
 		}
 	],
 	"repository": {
@@ -16,12 +19,13 @@
 				"match": "(\/\/.*)"
 			}]
 		},
-		"cardlines": {
+		"complete_cardlines": {
 			"patterns": [{
-				"match": "(\\d+) (.+)",
+				"match": "(\\d+) ((?:[^ {(]+ {0,1})+)(\\(.+\/.+\\))* *((?:\\{(?:\\d+|W|U|B|G|R)\\})*)",
 				"captures": {
 					"1": {"name": "constant.numeric.mtg"},
-					"2": {"name": "markup.italic.mtg"}
+					"3": {"name": "comment.line.mtg"},
+					"4": {"name": "markup.raw.mtg"}
 				}
 			}]
 		}

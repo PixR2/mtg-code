@@ -75,9 +75,7 @@ class CardCompletionItemProvider implements vscode.CompletionItemProvider {
             return undefined;
         }
 
-        console.log("search: " + search);
         let insertAt = lineStr.search(search[2]);
-        console.log("insertAt: " + insertAt.toString());
 
         let matches = fuzzy.filter(search[2], this.cardNames);
         // matches.sort(function (a, b) {
@@ -98,20 +96,24 @@ class CardCompletionItemProvider implements vscode.CompletionItemProvider {
 
 var nCardsMsg: vscode.Disposable;
 
-function runDiagnostics(e: vscode.TextDocumentChangeEvent) {
-    console.log("running diagnostics...");
 
+function runDiagnostics(doc: vscode.TextDocument) {
+    console.log("running diagnostics...");
     let diagnostics: vscode.Diagnostic[] = [];
 
-    let regexp: RegExp = new RegExp('^(\\d+) (.*)$');
+    let regexp: RegExp = new RegExp('(\\d+) ((?:[^ {(]+ {0,1})+)(\\(.+\/.+\\))* *((?:\\{(?:\\d+|W|U|B|G|R)\\})*)');
     const cardStats = {};
-    for (let i = 0; i < e.document.lineCount; i++) {
-        const lineStr: string = e.document.lineAt(i).text;
+    for (let i = 0; i < doc.lineCount; i++) {
+        const lineStr: string = doc.lineAt(i).text;
         const search = regexp.exec(lineStr);
         if (search) {
-            let cardNameStart = lineStr.search(search[2]);
-            let cardData = allCards[search[2]];
+            console.log("search: "+JSON.stringify(search));
+            const cardName = search[2].trim();
+            console.log("cardName:"+cardName);
+            let cardNameStart = lineStr.search(cardName);
+            let cardData = allCards[cardName];
             if (!cardData) {
+                console.log("cardNameStart: "+cardNameStart);
                 diagnostics.push(new vscode.Diagnostic(new vscode.Range(new vscode.Position(i, cardNameStart), new vscode.Position(i, lineStr.length)), "unknown card '" + search[2] + "'"));
             }
 
@@ -135,12 +137,10 @@ function runDiagnostics(e: vscode.TextDocumentChangeEvent) {
         let cardName = cardNames[c];
         let card = cardStats[cardName];
 
-        
-
         if (card.count > 4 && !card.cardData.types.includes("Land") && cardName !== "Relentless Rats") {
             for (let l = 0; l < card.lines.length; l++) {
                 let line = card.lines[l];
-                diagnostics.push(new vscode.Diagnostic(new vscode.Range(new vscode.Position(line, 0), new vscode.Position(line, card.cardNameStart-1)), "too many copies of '" + cardName + "'"));
+                diagnostics.push(new vscode.Diagnostic(new vscode.Range(new vscode.Position(line, 0), new vscode.Position(line, card.cardNameStart - 1)), "too many copies of '" + cardName + "'"));
             }
         }
 
@@ -157,9 +157,157 @@ function runDiagnostics(e: vscode.TextDocumentChangeEvent) {
         nCardsMsg = vscode.window.setStatusBarMessage("#cards: " + totalCardCount.toString());
     }
 
-    diagnosticCollection.set(e.document.uri, diagnostics);
+    diagnosticCollection.set(doc.uri, diagnostics);
+
+    console.log("running diagnostics done!");
 }
 
+function parseDecklist(doc: vscode.TextDocument) {
+    runDiagnostics(doc);
+}
+
+async function addManaCosts(e: vscode.TextEditor) {
+    console.log("addManaCosts");
+
+    let edits = [];
+
+    let regexp: RegExp = new RegExp('^(\\d+) (.*)$');
+    for (let i = 0; i < e.document.lineCount; i++) {
+        const lineStr: string = e.document.lineAt(i).text;
+        const search = regexp.exec(lineStr);
+        const card = search ? allCards[search[2]] : undefined;
+        if (!card) {
+            continue;
+        }
+
+        edits.push({ "pos": new vscode.Position(i, lineStr.length), "card": card });
+    }
+
+    await e.edit((eb: vscode.TextEditorEdit) => {
+        for (let e = 0; e < edits.length; e++) {
+            const edit = edits[e];
+            let insertStr = "";
+            if (edit.card.types.includes("Creature")) {
+                insertStr += " (" + edit.card.power + "/" + edit.card.toughness + ")";
+            }
+            if (edit.card.manaCost) {
+                insertStr += " " + edit.card.manaCost;
+            }
+            eb.insert(edit.pos, insertStr);
+        }
+    });
+
+    addDecorations(e);
+}
+
+let prevManaDecos;
+function addDecorations(e: vscode.TextEditor) {
+    console.log("addDecorations...");
+    if(prevManaDecos) {
+        const manaKeys = Object.getOwnPropertyNames(prevManaDecos);
+        for (let i = 0; i < manaKeys.length; i++) {
+            const k = manaKeys[i];
+            prevManaDecos[k].deco.dispose();
+        }
+    }
+
+    let manaDecos = {
+        "{W}": {
+            "deco": vscode.window.createTextEditorDecorationType({
+                color: 'rgba(0, 0, 0, 1)',
+                backgroundColor: 'rgba(248, 246, 218, 1)',
+                borderWidth: '1px',
+                borderStyle: 'solid',
+                borderRadius: '2px',
+                borderColor: 'rgba(0, 0, 0, 1)'
+            }),
+            "ranges": []
+        },
+        "{U}": {
+            "deco": vscode.window.createTextEditorDecorationType({
+                color: 'rgba(0, 0, 0, 1)',
+                backgroundColor: 'rgba(194, 216, 232, 1)',
+                borderWidth: '1px',
+                borderStyle: 'solid',
+                borderRadius: '2px',
+                borderColor: 'rgba(0, 0, 0, 1)'
+            }),
+            "ranges": []
+        },
+        "{B}": {
+            "deco": vscode.window.createTextEditorDecorationType({
+                color: 'rgba(0, 0, 0, 1)',
+                backgroundColor: 'rgba(186, 177, 171, 1)',
+                borderWidth: '1px',
+                borderStyle: 'solid',
+                borderRadius: '2px',
+                borderColor: 'rgba(0, 0, 0, 1)'
+            }),
+            "ranges": []
+        },
+        "{G}": {
+            "deco": vscode.window.createTextEditorDecorationType({
+                color: 'rgba(0, 0, 0, 1)',
+                backgroundColor: 'rgba(164, 191, 150, 1)',
+                borderWidth: '1px',
+                borderStyle: 'solid',
+                borderRadius: '2px',
+                borderColor: 'rgba(0, 0, 0, 1)'
+            }),
+            "ranges": []
+        },
+        "{R}": {
+            "deco": vscode.window.createTextEditorDecorationType({
+                color: 'rgba(0, 0, 0, 1)',
+                backgroundColor: 'rgba(227, 153, 122, 1)',
+                borderWidth: '1px',
+                borderStyle: 'solid',
+                borderRadius: '2px',
+                borderColor: 'rgba(0, 0, 0, 1)'
+            }),
+            "ranges": []
+        },
+        "{d}": {
+            "deco": vscode.window.createTextEditorDecorationType({
+                color: 'rgba(0, 0, 0, 1)',
+                backgroundColor: 'rgba(202, 197, 192, 1)',
+                borderWidth: '1px',
+                borderStyle: 'solid',
+                borderRadius: '2px',
+                borderColor: 'rgba(0, 0, 0, 1)'
+            }),
+            "ranges": []
+        }
+    };
+
+    prevManaDecos = manaDecos;
+
+    let regexp: RegExp = /(\{(?:\d+|W|U|B|G|R)\})/g;
+    for (let i = 0; i < e.document.lineCount; i++) {
+        const lineStr: string = e.document.lineAt(i).text;
+        // console.log(lineStr);
+        // console.log("mana symbols at line " + i + ":");
+        let match = undefined;
+        let lastIndex = 0;
+        while ((match = regexp.exec(lineStr))) {
+            const symbolStart = lineStr.indexOf(match[1], lastIndex);
+            lastIndex = regexp.lastIndex;
+            if (match[1] === "{W}" || match[1] === "{U}" || match[1] === "{B}" || match[1] === "{G}" || match[1] === "{R}") {
+                manaDecos[match[1]].ranges.push(new vscode.Range(new vscode.Position(i, symbolStart), new vscode.Position(i, symbolStart + match[1].length)));
+            } else {
+                manaDecos["{d}"].ranges.push(new vscode.Range(new vscode.Position(i, symbolStart), new vscode.Position(i, symbolStart + match[1].length)));
+            }
+        }
+    }
+
+    console.log(manaDecos);
+
+    const manaKeys = Object.getOwnPropertyNames(prevManaDecos);
+    for (let i = 0; i < manaKeys.length; i++) {
+        const k = manaKeys[i];
+        e.setDecorations(manaDecos[k].deco, manaDecos[k].ranges);
+    }
+}
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -184,7 +332,19 @@ export function activate(context: vscode.ExtensionContext) {
     diagnosticCollection = vscode.languages.createDiagnosticCollection('mtg');
     context.subscriptions.push(diagnosticCollection);
 
-    context.subscriptions.push(vscode.workspace.onDidChangeTextDocument(runDiagnostics));
+    context.subscriptions.push(vscode.workspace.onDidChangeTextDocument((e: vscode.TextDocumentChangeEvent) => {
+        console.log("onDidChangeTextDocument");
+        parseDecklist(e.document);
+        if (e.document.uri === vscode.window.activeTextEditor.document.uri) {
+            addManaCosts(vscode.window.activeTextEditor);
+            addDecorations(vscode.window.activeTextEditor);
+        }
+    }));
+
+    context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor((e: vscode.TextEditor) => {
+        addManaCosts(e);
+        addDecorations(e);
+    }));
 }
 
 // this method is called when your extension is deactivated
