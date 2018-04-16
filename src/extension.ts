@@ -18,16 +18,18 @@ class CardHoverProvider implements vscode.HoverProvider {
         position: vscode.Position,
         token: vscode.CancellationToken):
         Promise<vscode.Hover> {
-        let regexp: RegExp = new RegExp('^\\d+ (.*)$');
+        let regexp: RegExp = new RegExp('(\\d+) ((?:[^ {(]+ {0,1})+)(\\(.+\/.+\\))* *((?:\\{(?:\\d+|W|U|B|G|R)\\})*)');
         let search = regexp.exec(document.lineAt(position.line).text);
-        if (!search || search.length !== 2) {
+        if (!search || search.length < 3) {
             return undefined;
         }
 
-        let cardPath: string = `${__dirname}/card-cache/${encodeURIComponent(search[1])}.json`;
+        let cardName = search[2].trim();
+
+        let cardPath: string = `${__dirname}/card-cache/${encodeURIComponent(cardName)}.json`;
         if (!fs.existsSync(cardPath)) {
             console.log("sending request to scryfall to get card metadata");
-            var newCard = await request.json<any>(`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(search[1])}`);
+            var newCard = await request.json<any>(`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(cardName)}`);
             fs.writeFileSync(cardPath, JSON.stringify(newCard));
         }
 
