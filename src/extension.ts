@@ -210,14 +210,14 @@ async function addManaCosts(e: vscode.TextEditor) {
     addDecorations(e);
 }
 
-let prevManaDecos;
+let prevManaDecos = {};
 function addDecorations(e: vscode.TextEditor) {
-    console.log("addDecorations...");
-    if (prevManaDecos) {
-        const manaKeys = Object.getOwnPropertyNames(prevManaDecos);
+    console.log("addDecorations..." + e.document.uri.toString());
+    if (prevManaDecos[e.document.uri.toString()]) {
+        const manaKeys = Object.getOwnPropertyNames(prevManaDecos[e.document.uri.toString()]);
         for (let i = 0; i < manaKeys.length; i++) {
             const k = manaKeys[i];
-            prevManaDecos[k].deco.dispose();
+            prevManaDecos[e.document.uri.toString()][k].deco.dispose();
         }
     }
 
@@ -290,7 +290,7 @@ function addDecorations(e: vscode.TextEditor) {
         }
     };
 
-    prevManaDecos = manaDecos;
+    prevManaDecos[e.document.uri.toString()] = manaDecos;
 
     let regexp: RegExp = /(\{(?:\d+|W|U|B|G|R)\})/g;
     for (let i = 0; i < e.document.lineCount; i++) {
@@ -312,10 +312,10 @@ function addDecorations(e: vscode.TextEditor) {
 
     console.log(manaDecos);
 
-    const manaKeys = Object.getOwnPropertyNames(prevManaDecos);
+    const manaKeys = Object.getOwnPropertyNames(prevManaDecos[e.document.uri.toString()]);
     for (let i = 0; i < manaKeys.length; i++) {
         const k = manaKeys[i];
-        e.setDecorations(manaDecos[k].deco, manaDecos[k].ranges);
+        e.setDecorations(prevManaDecos[e.document.uri.toString()][k].deco, prevManaDecos[e.document.uri.toString()][k].ranges);
     }
 }
 
