@@ -12,6 +12,29 @@ let allCards = {};
 
 let diagnosticCollection: vscode.DiagnosticCollection;
 
+let prefetchCardImage = async (card): Promise<string> => {
+    let imgPath: string = `${__dirname}/img-cache/${card.id}.png`;
+    if (!fs.existsSync(imgPath)) {
+        console.log(`Downloading image from ${card.image_uris.png}`);
+        let originalBuf = await imgDownload(card.image_uris.png);
+        fs.writeFile(imgPath, originalBuf, (err) => {
+            if (err) {
+                console.log("failed to write image to cache");
+                return "";
+            }
+        });
+        let smallBuf = await resizeImg(originalBuf, { width: 149, height: 208 });
+        fs.writeFile(imgPath + '.small', smallBuf, (err) => {
+            if (err) {
+                console.log("failed to write small image to cache");
+                return "";
+            }
+        });
+    }
+
+    return imgPath;
+}
+
 class CardHoverProvider implements vscode.HoverProvider {
     public async provideHover(
         document: vscode.TextDocument,
@@ -36,25 +59,10 @@ class CardHoverProvider implements vscode.HoverProvider {
         var rawCard = fs.readFileSync(cardPath);
         var card = JSON.parse(rawCard.toString());
 
-        let imgPath: string = `${__dirname}/img-cache/${card.id}.png`;
-        if (!fs.existsSync(imgPath)) {
-            console.log(`Downloading image from ${card.image_uris.png}`);
-            let originalBuf = await imgDownload(card.image_uris.png);
-            fs.writeFile(imgPath, originalBuf, (err) => {
-                if (err) {
-                    console.log("failed to write image to cache");
-                    return;
-                }
-            });
-            let smallBuf = await resizeImg(originalBuf, { width: 149, height: 208 });
-            fs.writeFile(imgPath + '.small', smallBuf, (err) => {
-                if (err) {
-                    console.log("failed to write small image to cache");
-                    return;
-                }
-            });
+        const imgPath = await prefetchCardImage(card);
+        if (imgPath === "") {
+            return new vscode.Hover("failed to load card image");
         }
-
 
         return new vscode.Hover(new vscode.MarkdownString(`![image of ${card.name}](file://${imgPath + '.small'} "${card.oracle_text}")`));
     }
@@ -109,13 +117,13 @@ function runDiagnostics(doc: vscode.TextDocument) {
         const lineStr: string = doc.lineAt(i).text;
         const search = regexp.exec(lineStr);
         if (search) {
-            console.log("search: "+JSON.stringify(search));
+            console.log("search: " + JSON.stringify(search));
             const cardName = search[2].trim();
-            console.log("cardName:"+cardName);
+            console.log("cardName:" + cardName);
             let cardNameStart = lineStr.search(cardName);
             let cardData = allCards[cardName];
             if (!cardData) {
-                console.log("cardNameStart: "+cardNameStart);
+                console.log("cardNameStart: " + cardNameStart);
                 diagnostics.push(new vscode.Diagnostic(new vscode.Range(new vscode.Position(i, cardNameStart), new vscode.Position(i, lineStr.length)), "unknown card '" + search[2] + "'"));
             }
 
@@ -205,7 +213,7 @@ async function addManaCosts(e: vscode.TextEditor) {
 let prevManaDecos;
 function addDecorations(e: vscode.TextEditor) {
     console.log("addDecorations...");
-    if(prevManaDecos) {
+    if (prevManaDecos) {
         const manaKeys = Object.getOwnPropertyNames(prevManaDecos);
         for (let i = 0; i < manaKeys.length; i++) {
             const k = manaKeys[i];
@@ -322,6 +330,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     fs.mkdir(`${__dirname}/img-cache`);
     fs.mkdir(`${__dirname}/card-cache`);
+    fs.mkdir(`${__dirname}/searches`);
 
     var rawAllCards = fs.readFileSync(`${__dirname}/carddb/AllCards.json`);
     allCards = JSON.parse(rawAllCards.toString());
@@ -346,6 +355,45 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor((e: vscode.TextEditor) => {
         addManaCosts(e);
         addDecorations(e);
+    }));
+
+    context.subscriptions.push(vscode.commands.registerCommand('extension.searchCards', async () => {
+        let query = await vscode.window.showInputBox({
+            ignoreFocusOut: true,
+            placeHolder: "Enter search query...",
+            prompt: "Accepts scryfall.com search queries."
+        });
+
+        var resp = await request.json<any>(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(query)}`);
+        const cards = resp.data;
+
+        const searchDir = `${__dirname}/searches`;
+        if (!fs.existsSync(searchDir)) {
+            fs.mkdirSync(searchDir);
+        }
+        const mdPath = `${searchDir}/${encodeURIComponent(query)}.html`;
+        let content = `<html><body><h1>${query}</h1>`;
+        for (let c = 0; c < cards.length; c++) {
+            let card = cards[c];
+            let imgPath: string = `${__dirname}/img-cache/${card.id}.png`;
+            console.log(imgPath);
+            if (fs.existsSync(imgPath)) {
+                console.log("image in cache for search result...");
+                content += `<img src="${imgPath}" alt="${card.name}" style="width: 229px;"/>`;
+            } else {
+
+                prefetchCardImage(card);
+                content += `<img src="${card.image_uris.normal}" alt="${card.name}" style="width: 229px;"/>`;
+            }
+            // content += `![${card.name}](${imgPath} =372x)\n`;
+            // content += `\n1 ${card.name} ${card.type_line.indexOf("Creature") !== -1 ? `(${card.power}/${card.toughness}) ` : ``}${card.mana_cost}`;
+        }
+
+        content += "</body></html>";
+
+        fs.writeFileSync(mdPath, content, 'utf8');
+        let res_doc = await vscode.workspace.openTextDocument(mdPath);
+        await vscode.commands.executeCommand('vscode.previewHtml', res_doc.uri, vscode.ViewColumn.Two, `card search: ${query}`);
     }));
 }
 
