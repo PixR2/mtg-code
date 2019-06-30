@@ -7,8 +7,14 @@ import * as imgDownload from 'image-download';
 import * as fs from 'fs';
 import * as resizeImg from 'resize-img';
 import * as fuzzy from 'fuzzy';
+import * as Scry from 'scryfall-sdk';
 
 let allCards = {};
+let searchCache = [];
+
+function nextSearchID() {
+    return searchCache.length;
+}
 
 let diagnosticCollection: vscode.DiagnosticCollection;
 
@@ -176,6 +182,69 @@ function parseDecklist(doc: vscode.TextDocument) {
     runDiagnostics(doc);
 }
 
+async function performSearchQueries(e: vscode.TextEditor) {
+    console.log("performSearchQueries");
+
+    let edits = [];
+
+    // Search: f:modern o:/deathtouch/ c:B
+    let regexp: RegExp = new RegExp(`^\\/\\/ *Search: *(.*) *; *(?:\\[(\\d+)\\])? *$`);
+    for (let i = 0; i < e.document.lineCount; i++) {
+        const lineStr: string = e.document.lineAt(i).text;
+        const search = regexp.exec(lineStr);
+        
+        console.log(search);
+
+        if (search == undefined) {
+            continue;
+        }
+
+        console.log("found search line: ", search);
+
+        if(search[2] == null) {
+            continue;
+        }
+
+        const id = parseInt(search[2]);
+
+        console.log('found search with id: ', id);
+
+        if(searchCache[id] == null) {
+            console.log('search with id ', id, ' is not in cache');
+
+            var resp = await request.json<any>(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(search[1])}`);
+
+            searchCache[id] = {
+                query: search[1],
+                result: resp.data,
+            }
+
+            continue;
+        }
+
+        if(searchCache[id].query !== search[1]) {
+            console.log('search with id ', id, ' changed');
+
+            var resp = await request.json<any>(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(search[1])}`);
+            
+            searchCache[id] = {
+                query: search[1],
+                result: resp.data,
+            }
+            continue;
+        }
+    }
+
+    console.log("searchCache:", searchCache);
+
+    await e.edit((eb: vscode.TextEditorEdit) => {
+        for (let e = 0; e < edits.length; e++) {
+            const edit = edits[e];
+            eb.insert(edit.pos, ` [${edit.id}]`);
+        }
+    });
+}
+
 async function addManaCosts(e: vscode.TextEditor) {
     console.log("addManaCosts");
 
@@ -319,21 +388,34 @@ function addDecorations(e: vscode.TextEditor) {
     }
 }
 
+async function updateAllCardsDB() {
+    const allCardsJSON = await request.json<any>('https://mtgjson.com/json/AllCards.json');
+    fs.writeFileSync(`${__dirname}/carddb/AllCards.json`, JSON.stringify(allCardsJSON));
+    return allCardsJSON
+}
+
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
 
     // Use the console to output diagnostic information (console.log) and errors (console.error)
     // This line of code will only be executed once when your extension is activated
     console.log('Congratulations, your extension "mtg-code" is now active!');
     console.log(__dirname);
 
-    fs.mkdir(`${__dirname}/img-cache`);
-    fs.mkdir(`${__dirname}/card-cache`);
-    fs.mkdir(`${__dirname}/searches`);
+    fs.mkdir(`${__dirname}/img-cache`, e => {});
+    fs.mkdir(`${__dirname}/card-cache`, e => {});
+    fs.mkdir(`${__dirname}/searches`, e => {});
+    fs.mkdir(`${__dirname}/carddb`, e => {});
 
-    var rawAllCards = fs.readFileSync(`${__dirname}/carddb/AllCards.json`);
-    allCards = JSON.parse(rawAllCards.toString());
+    try {
+        var rawAllCards = fs.readFileSync(`${__dirname}/carddb/AllCards.json`);
+        allCards = JSON.parse(rawAllCards.toString());
+    }
+    catch(e) {
+        allCards = await updateAllCardsDB();
+    }
+    
 
     context.subscriptions.push(vscode.languages.registerHoverProvider('mtg', new CardHoverProvider()));
 
@@ -349,12 +431,17 @@ export function activate(context: vscode.ExtensionContext) {
         if (e.document.uri === vscode.window.activeTextEditor.document.uri) {
             addManaCosts(vscode.window.activeTextEditor);
             addDecorations(vscode.window.activeTextEditor);
+            performSearchQueries(vscode.window.activeTextEditor);
         }
     }));
 
     context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor((e: vscode.TextEditor) => {
+        if(e == undefined || e.document == undefined) {
+            return
+        }
         addManaCosts(e);
         addDecorations(e);
+        performSearchQueries(e);
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand('extension.searchCards', async () => {
