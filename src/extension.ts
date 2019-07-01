@@ -7,10 +7,10 @@ import * as imgDownload from 'image-download';
 import * as fs from 'fs';
 import * as resizeImg from 'resize-img';
 import * as fuzzy from 'fuzzy';
-import * as Scry from 'scryfall-sdk';
 
 let allCards = {};
 let searchCache = [];
+let cardPrices = {};
 
 function nextSearchID() {
     return searchCache.length;
@@ -21,18 +21,18 @@ let diagnosticCollection: vscode.DiagnosticCollection;
 let prefetchCardImage = async (card): Promise<string> => {
     let imgPath: string = `${__dirname}/img-cache/${card.id}.png`;
     if (!fs.existsSync(imgPath)) {
-        console.log(`Downloading image from ${card.image_uris.png}`);
+        
         let originalBuf = await imgDownload(card.image_uris.png);
         fs.writeFile(imgPath, originalBuf, (err) => {
             if (err) {
-                console.log("failed to write image to cache");
+                
                 return "";
             }
         });
         let smallBuf = await resizeImg(originalBuf, { width: 149, height: 208 });
         fs.writeFile(imgPath + '.small', smallBuf, (err) => {
             if (err) {
-                console.log("failed to write small image to cache");
+                
                 return "";
             }
         });
@@ -57,7 +57,14 @@ class CardHoverProvider implements vscode.HoverProvider {
 
         let cardPath: string = `${__dirname}/card-cache/${encodeURIComponent(cardName)}.json`;
         if (!fs.existsSync(cardPath)) {
-            console.log("sending request to scryfall to get card metadata");
+            
+            var newCard = await request.json<any>(`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(cardName)}`);
+            fs.writeFileSync(cardPath, JSON.stringify(newCard));
+        }
+
+        var stats = fs.statSync(cardPath);
+        var mtime = stats.mtime;
+        if(((new Date()) - stats.mtime) > 86400000) {
             var newCard = await request.json<any>(`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(cardName)}`);
             fs.writeFileSync(cardPath, JSON.stringify(newCard));
         }
@@ -70,7 +77,7 @@ class CardHoverProvider implements vscode.HoverProvider {
             return new vscode.Hover("failed to load card image");
         }
 
-        return new vscode.Hover(new vscode.MarkdownString(`![image of ${card.name}](file://${imgPath + '.small'} "${card.oracle_text}")`));
+        return new vscode.Hover(new vscode.MarkdownString(`![image of ${card.name}](file://${imgPath + '.small'} "${card.oracle_text}")\n\nPrice: ${card.prices.usd}$ / ${card.prices.eur}€`));
     }
 }
 
@@ -114,7 +121,8 @@ var nCardsMsg: vscode.Disposable;
 
 
 function runDiagnostics(doc: vscode.TextDocument) {
-    console.log("running diagnostics...");
+    console.log('runDiagnostics')
+
     let diagnostics: vscode.Diagnostic[] = [];
 
     let regexp: RegExp = new RegExp('(\\d+) ((?:[^ {(]+ {0,1})+)(\\(.+\/.+\\))* *((?:\\{(?:\\d+|W|U|B|G|R)\\})*)');
@@ -123,15 +131,22 @@ function runDiagnostics(doc: vscode.TextDocument) {
         const lineStr: string = doc.lineAt(i).text;
         const search = regexp.exec(lineStr);
         if (search) {
-            console.log("search: " + JSON.stringify(search));
             const cardName = search[2].trim();
-            console.log("cardName:" + cardName);
+            
             let cardNameStart = lineStr.search(cardName);
             let cardData = allCards[cardName];
             if (!cardData) {
-                console.log("cardNameStart: " + cardNameStart);
-                diagnostics.push(new vscode.Diagnostic(new vscode.Range(new vscode.Position(i, cardNameStart), new vscode.Position(i, lineStr.length)), "unknown card '" + search[2] + "'"));
-            }
+                try{
+                    diagnostics.push(new vscode.Diagnostic(new vscode.Range(new vscode.Position(i, cardNameStart), new vscode.Position(i, lineStr.length)), "unknown card '" + search[2] + "'"));
+                } catch(e) {
+                    console.log("unknown card: ",  cardName);
+                }
+            } 
+            // else {
+            //     if(cardPrices[cardName] == null) {
+            //         cardPrices[cardName] = {}
+            //     }
+            // }
 
             if (!cardStats[search[2]]) {
                 cardStats[search[2]] = {
@@ -175,7 +190,30 @@ function runDiagnostics(doc: vscode.TextDocument) {
 
     diagnosticCollection.set(doc.uri, diagnostics);
 
-    console.log("running diagnostics done!");
+    // let priceRequests = []
+    // cardNames = Object.getOwnPropertyNames(cardPrices);
+    // for (let c = 0; c < cardNames.length; c++) {
+    //     let cardName = cardNames[c];
+    //     let price = cardPrices[cardName];
+
+    //     if(price.prices == null) {
+    //         priceRequests.push({name: cardName});
+    //     }
+    // }
+
+    // while(priceRequests.length > 0) {
+    //     const numCards = Math.min(priceRequests.length, 75);
+    //     request.post('https://api.scryfall.com/cards/collection', {json: true}, {identifiers: priceRequests.slice(0, numCards)})
+    //         .then(resp => {
+    //             for(let c = 0; c < resp.content.data.length; c++) {
+    //                 const card = resp.content.data[c];
+    //                 cardPrices[card.name].prices = card.prices;
+    //             }
+    //         })
+    //         .catch(err => console.log(err));
+
+    //         priceRequests.splice(0, numCards)
+    // }
 }
 
 function parseDecklist(doc: vscode.TextDocument) {
@@ -183,35 +221,22 @@ function parseDecklist(doc: vscode.TextDocument) {
 }
 
 async function performSearchQueries(e: vscode.TextEditor) {
-    console.log("performSearchQueries");
-
-    let edits = [];
-
-    // Search: f:modern o:/deathtouch/ c:B
+    // Search: f:modern o:/deathtouch/ c:B; [1]
     let regexp: RegExp = new RegExp(`^\\/\\/ *Search: *(.*) *; *(?:\\[(\\d+)\\])? *$`);
     for (let i = 0; i < e.document.lineCount; i++) {
         const lineStr: string = e.document.lineAt(i).text;
         const search = regexp.exec(lineStr);
-        
-        console.log(search);
 
         if (search == undefined) {
             continue;
         }
-
-        console.log("found search line: ", search);
 
         if(search[2] == null) {
             continue;
         }
 
         const id = parseInt(search[2]);
-
-        console.log('found search with id: ', id);
-
         if(searchCache[id] == null) {
-            console.log('search with id ', id, ' is not in cache');
-
             var resp = await request.json<any>(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(search[1])}`);
 
             searchCache[id] = {
@@ -223,8 +248,6 @@ async function performSearchQueries(e: vscode.TextEditor) {
         }
 
         if(searchCache[id].query !== search[1]) {
-            console.log('search with id ', id, ' changed');
-
             var resp = await request.json<any>(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(search[1])}`);
             
             searchCache[id] = {
@@ -234,20 +257,57 @@ async function performSearchQueries(e: vscode.TextEditor) {
             continue;
         }
     }
+}
 
-    console.log("searchCache:", searchCache);
+async function insertSearchResults(e: vscode.TextEditor) {
+    let regexp: RegExp = new RegExp(`^ *\\[(\\d+)\\] *$`);
 
-    await e.edit((eb: vscode.TextEditorEdit) => {
-        for (let e = 0; e < edits.length; e++) {
-            const edit = edits[e];
-            eb.insert(edit.pos, ` [${edit.id}]`);
+    let inserts = [];
+    for (let i = 0; i < e.document.lineCount; i++) {
+        const lineStr: string = e.document.lineAt(i).text;
+        const search = regexp.exec(lineStr);
+
+        if(search == null) {
+            continue;
         }
-    });
+
+        const id = parseInt(search[1]);
+        if(id == null) {
+            continue;
+        }
+
+        const cachedValue = searchCache[id];
+        if(cachedValue == null) {
+            continue;
+        }
+
+        let insertStr = "";
+        for(var j = 0; j < cachedValue.result.length; j++) {
+            insertStr += `1 ${cachedValue.result[j].name}\n`;
+        }
+
+        inserts.push({
+            query: cachedValue.query,
+            line: i,
+            str: insertStr,
+        })
+
+        console.log("printing search result: ", cachedValue.result);
+
+        await e.edit((eb: vscode.TextEditorEdit) => {
+            for (let e = 0; e < inserts.length; e++) {
+                eb.delete(
+                    new vscode.Range(
+                        new vscode.Position(inserts[e].line, 0),
+                        new vscode.Position(inserts[e].line, inserts[e].str.length)));
+                
+                eb.insert(new vscode.Position(inserts[e].line, 0), `// Cards matching '${inserts[e].query}':\n${inserts[e].str}`);
+            }
+        });
+    }
 }
 
 async function addManaCosts(e: vscode.TextEditor) {
-    console.log("addManaCosts");
-
     let edits = [];
 
     let regexp: RegExp = new RegExp('^(\\d+) (.*)$');
@@ -281,7 +341,7 @@ async function addManaCosts(e: vscode.TextEditor) {
 
 let prevManaDecos = {};
 function addDecorations(e: vscode.TextEditor) {
-    console.log("addDecorations..." + e.document.uri.toString());
+    
     if (prevManaDecos[e.document.uri.toString()]) {
         const manaKeys = Object.getOwnPropertyNames(prevManaDecos[e.document.uri.toString()]);
         for (let i = 0; i < manaKeys.length; i++) {
@@ -364,8 +424,8 @@ function addDecorations(e: vscode.TextEditor) {
     let regexp: RegExp = /(\{(?:\d+|W|U|B|G|R)\})/g;
     for (let i = 0; i < e.document.lineCount; i++) {
         const lineStr: string = e.document.lineAt(i).text;
-        // console.log(lineStr);
-        // console.log("mana symbols at line " + i + ":");
+        // 
+        // 
         let match = undefined;
         let lastIndex = 0;
         while ((match = regexp.exec(lineStr))) {
@@ -379,7 +439,7 @@ function addDecorations(e: vscode.TextEditor) {
         }
     }
 
-    console.log(manaDecos);
+    
 
     const manaKeys = Object.getOwnPropertyNames(prevManaDecos[e.document.uri.toString()]);
     for (let i = 0; i < manaKeys.length; i++) {
@@ -400,8 +460,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // Use the console to output diagnostic information (console.log) and errors (console.error)
     // This line of code will only be executed once when your extension is activated
-    console.log('Congratulations, your extension "mtg-code" is now active!');
-    console.log(__dirname);
+    
+    
 
     fs.mkdir(`${__dirname}/img-cache`, e => {});
     fs.mkdir(`${__dirname}/card-cache`, e => {});
@@ -426,12 +486,13 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(diagnosticCollection);
 
     context.subscriptions.push(vscode.workspace.onDidChangeTextDocument((e: vscode.TextDocumentChangeEvent) => {
-        console.log("onDidChangeTextDocument");
+        
         parseDecklist(e.document);
         if (e.document.uri === vscode.window.activeTextEditor.document.uri) {
             addManaCosts(vscode.window.activeTextEditor);
             addDecorations(vscode.window.activeTextEditor);
             performSearchQueries(vscode.window.activeTextEditor);
+            insertSearchResults(vscode.window.activeTextEditor)
         }
     }));
 
@@ -442,6 +503,7 @@ export async function activate(context: vscode.ExtensionContext) {
         addManaCosts(e);
         addDecorations(e);
         performSearchQueries(e);
+        insertSearchResults(e);
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand('extension.searchCards', async () => {
@@ -463,9 +525,9 @@ export async function activate(context: vscode.ExtensionContext) {
         for (let c = 0; c < cards.length; c++) {
             let card = cards[c];
             let imgPath: string = `${__dirname}/img-cache/${card.id}.png`;
-            console.log(imgPath);
+            
             if (fs.existsSync(imgPath)) {
-                console.log("image in cache for search result...");
+                
                 content += `<img src="${imgPath}" alt="${card.name}" style="width: 229px;"/>`;
             } else {
 
