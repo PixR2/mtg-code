@@ -62,7 +62,7 @@
         "fuzzy": "^0.1.3",
         "image-download": "^1.1.0",
         "image-downloader": "^3.3.0",
-        "npm": "^6.13.4",
+        "npm": "^6.14.6",
         "resize-img": "^1.1.2",
         "scryfall-sdk": "^1.5.1",
         "update": "^0.7.4",
