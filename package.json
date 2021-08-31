@@ -1,0 +1,72 @@
+{
+	"name": "mtg-code",
+	"displayName": "mtg-code",
+	"description": "This Visual Studio Code extension adds tools for building decklists for Magic the Gathering.",
+	"version": "0.0.1",
+	"engines": {
+		"vscode": "^1.59.0"
+	},
+	"categories": [
+		"Other"
+	],
+	"activationEvents": [
+		"onLanguage:mtg",
+		"onCommand:extension.searchCards"
+	],
+	"main": "./out/extension.js",
+	"contributes": {
+		"languages": [
+			{
+				"id": "mtg",
+				"extensions": [
+					".mtg"
+				],
+				"aliases": [
+					"mtg"
+				],
+				"configuration": "./language-configuration.json"
+			}
+		],
+		"grammars": [
+			{
+				"language": "mtg",
+				"scopeName": "source.mtg",
+				"path": "./syntaxes/mtg.tmLanguage.json"
+			}
+		],
+		"commands": [
+			{
+				"command": "extension.searchCards",
+				"title": "Search Cards",
+				"category": "mtg"
+			}
+		]
+	},
+	"scripts": {
+		"vscode:prepublish": "npm run compile",
+		"compile": "tsc -p ./",
+		"watch": "tsc -watch -p ./",
+		"pretest": "npm run compile && npm run lint",
+		"lint": "eslint src --ext ts",
+		"test": "node ./out/test/runTest.js"
+	},
+	"devDependencies": {
+		"@types/vscode": "^1.59.0",
+		"@types/glob": "^7.1.3",
+		"@types/mocha": "^8.2.2",
+		"@types/node": "14.x",
+		"eslint": "^7.27.0",
+		"@typescript-eslint/eslint-plugin": "^4.26.0",
+		"@typescript-eslint/parser": "^4.26.0",
+		"glob": "^7.1.7",
+		"mocha": "^8.4.0",
+		"typescript": "^4.3.2",
+		"vscode-test": "^1.5.2"
+	},
+	"dependencies": {
+		"fuzzy": "^0.1.3",
+		"image-download": "^1.3.2",
+		"resize-img": "^2.0.0",
+		"web-request": "^1.0.7"
+	}
+}

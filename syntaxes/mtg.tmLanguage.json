@@ -1,0 +1,60 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "mtg",
+	"patterns": [
+		{
+			"include": "#complete_cardlines"
+		},
+		{
+			"include": "#sections"
+		}
+	],
+	"repository": {
+		"sections": {
+			"name": "markup.heading.mtg",
+			"begin": "^\\/\\/",
+			"end": "$",
+			"patterns": [
+				{
+					"begin": "Search:",
+					"end": "(;|$)",
+					"patterns": [
+						{
+							"match": "([^; \n]+?)(:|=|>=|<=|<|>)((?:\"[^\"]*\")|(?:\/[^\"]*\/)|(?:\\'[^\"]*\\')|(?:[^; \n]*))",
+							"captures": {
+								"1": {
+									"name": "variable.mtg"
+								},
+								"2": {
+									"name": "keyword.operator.mtg"
+								},
+								"3": {
+									"name": "string.unquoted.mtg"
+								}
+							}
+						}
+					]
+				}
+			]
+		},
+		"complete_cardlines": {
+			"patterns": [
+				{
+					"match": "(\\d+) +((?:(\\/\\/)|[^\\/]+)+)",
+					"captures": {
+						"1": {
+							"name": "constant.numeric.mtg"
+						},
+						"2": {
+							"name": "variable.name.mtg"
+						},
+						"3": {
+							"name": "keyword.operator.mtg"
+						}
+					}
+				}
+			]
+		}
+	},
+	"scopeName": "source.mtg"
+}
