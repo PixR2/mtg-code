@@ -18,6 +18,7 @@ export interface Card {
     cardmarketID?: number;
     arenaID?: number;
     name?: string;
+    printedName?: string;
     lang?: string;
     releasedAt?: Date;
     uri?: string;
@@ -29,11 +30,14 @@ export interface Card {
     manaCost?: string;
     cmc?: number;
     typeLine?: string;
+    printedTypeLine?: string;
     oracleText?: string;
+    printedText?: string;
     power?: string;
     toughness?: string;
     loyalty?: string;
     colors?: string[];
+    colorIndicator?: string;
     colorIdentity?: string[];
     keywords?: string[];
     producedMana?: string[];
@@ -44,6 +48,7 @@ export interface Card {
     reserved?: boolean;
     foil?: boolean;
     nonfoil?: boolean;
+    finishes?: string[];
     oversized?: boolean;
     promo?: boolean;
     reprint?: boolean;
@@ -146,8 +151,10 @@ export interface Preview {
 export interface Prices {
     usd?: string;
     usdFoil?: string;
+    usdEtched?: string;
     eur?: string;
     eurFoil?: string;
+    eurEtched?: string;
     tix?: string;
 }
 
@@ -325,6 +332,7 @@ const typeMap: any = {
         { json: "cardmarket_id", js: "cardmarketID", typ: u(undefined, 0) },
         { json: "arena_id", js: "arenaID", typ: u(undefined, 0) },
         { json: "name", js: "name", typ: u(undefined, "") },
+        { json: "printed_name", js: "printedName", typ: u(undefined, "") },
         { json: "lang", js: "lang", typ: u(undefined, "") },
         { json: "released_at", js: "releasedAt", typ: u(undefined, Date) },
         { json: "uri", js: "uri", typ: u(undefined, "") },
@@ -336,11 +344,14 @@ const typeMap: any = {
         { json: "mana_cost", js: "manaCost", typ: u(undefined, "") },
         { json: "cmc", js: "cmc", typ: u(undefined, 0) },
         { json: "type_line", js: "typeLine", typ: u(undefined, "") },
+        { json: "printed_type_line", js: "printedTypeLine", typ: u(undefined, "") },
         { json: "oracle_text", js: "oracleText", typ: u(undefined, "") },
+        { json: "printed_text", js: "printedText", typ: u(undefined, "") },
         { json: "power", js: "power", typ: u(undefined, "") },
         { json: "toughness", js: "toughness", typ: u(undefined, "") },
         { json: "loyalty", js: "loyalty", typ: u(undefined, "") },
         { json: "colors", js: "colors", typ: u(undefined, a("")) },
+        { json: "color_indicator", js: "colorIndicator", typ: u(undefined, a("")) },
         { json: "color_identity", js: "colorIdentity", typ: u(undefined, a("")) },
         { json: "keywords", js: "keywords", typ: u(undefined, a("")) },
         { json: "produced_mana", js: "producedMana", typ: u(undefined, a("")) },
@@ -351,6 +362,7 @@ const typeMap: any = {
         { json: "reserved", js: "reserved", typ: u(undefined, true) },
         { json: "foil", js: "foil", typ: u(undefined, true) },
         { json: "nonfoil", js: "nonfoil", typ: u(undefined, true) },
+        { json: "finishes", js: "finishes", typ: u(undefined, a("")) },
         { json: "oversized", js: "oversized", typ: u(undefined, true) },
         { json: "promo", js: "promo", typ: u(undefined, true) },
         { json: "reprint", js: "reprint", typ: u(undefined, true) },
@@ -448,8 +460,10 @@ const typeMap: any = {
     "Prices": o([
         { json: "usd", js: "usd", typ: u(undefined, "", null) },
         { json: "usd_foil", js: "usdFoil", typ: u(undefined, "", null) },
+        { json: "usd_etched", js: "usdEtched", typ: u(undefined, "", null) },
         { json: "eur", js: "eur", typ: u(undefined, "", null) },
         { json: "eur_foil", js: "eurFoil", typ: u(undefined, "", null) },
+        { json: "eur_etched", js: "eurEtched", typ: u(undefined, "", null) },
         { json: "tix", js: "tix", typ: u(undefined, "", null) },
     ], false),
     "PurchaseUris": o([
