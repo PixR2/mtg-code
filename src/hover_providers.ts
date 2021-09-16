@@ -32,8 +32,9 @@ export class CardHoverProvider implements vscode.HoverProvider {
         position: vscode.Position,
         token: vscode.CancellationToken):
         Promise<vscode.Hover> {
-        let regexp: RegExp = new RegExp('(\\d+) ((?:[^ {(]+ {0,1})+)(\\(.+\/.+\\))* *((?:\\{(?:\\d+|W|U|B|G|R)\\})*)');
+        let regexp: RegExp = /^(\d+) +(.+)$/;
         let search = regexp.exec(document.lineAt(position.line).text);
+
         if (!search || search.length < 3) {
             return new vscode.Hover('');
         }
@@ -53,7 +54,7 @@ export class CardHoverProvider implements vscode.HoverProvider {
 
 export class CardSearchHoverProvider implements vscode.HoverProvider {
     cardDB: CardDB;
-    regexp: RegExp = /^\/\/ *Search: *([^;]*?) *; *$/i;
+    regexp: RegExp = /^\/\/ *Search: *([^;]*?) *$/i;
     constructor(cardDB: CardDB) {
         this.cardDB = cardDB;
     }
@@ -79,7 +80,7 @@ export class CardSearchHoverProvider implements vscode.HoverProvider {
                 let priceLine = getPriceLine(card);
                 return `### ${card.name}\n\n${imagesLine}\n\n${priceLine}`;
             });
-            return new vscode.Hover(new vscode.MarkdownString(cardLines.join("\n\n")));
+            return new vscode.Hover(new vscode.MarkdownString(cardLines.join('\n\n')));
         }
         catch (e) {
             return new vscode.Hover(new vscode.MarkdownString(`searching cards failed: ${e}`));
