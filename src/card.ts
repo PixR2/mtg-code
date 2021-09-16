@@ -15,6 +15,7 @@ export interface Card {
     mtgoID?: number;
     mtgoFoilID?: number;
     tcgplayerID?: number;
+    tcgplayerEtchedID?: number;
     cardmarketID?: number;
     arenaID?: number;
     name?: string;
@@ -329,6 +330,7 @@ const typeMap: any = {
         { json: "mtgo_id", js: "mtgoID", typ: u(undefined, 0) },
         { json: "mtgo_foil_id", js: "mtgoFoilID", typ: u(undefined, 0) },
         { json: "tcgplayer_id", js: "tcgplayerID", typ: u(undefined, 0) },
+        { json: "tcgplayer_etched_id", js: "tcgplayerEtchedID", typ: u(undefined, 0) },
         { json: "cardmarket_id", js: "cardmarketID", typ: u(undefined, 0) },
         { json: "arena_id", js: "arenaID", typ: u(undefined, 0) },
         { json: "name", js: "name", typ: u(undefined, "") },
