@@ -11,7 +11,7 @@
 	],
 	"activationEvents": [
 		"onLanguage:mtg",
-		"onCommand:extension.searchCards"
+		"onCommand:mtg-code.search-cards"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
@@ -36,7 +36,7 @@
 		],
 		"commands": [
 			{
-				"command": "extension.searchCards",
+				"command": "mtg-code.search-cards",
 				"title": "Search Cards",
 				"category": "mtg"
 			}
