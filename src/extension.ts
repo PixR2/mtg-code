@@ -7,6 +7,7 @@ import { stringify } from 'querystring';
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 import { CardDB } from './card_db';
+import { CardLine, getNumberOfCards, parseCardLine } from './card_statistics';
 import { CardSearchLensProvider } from './code_lens_providers';
 import { searchCards } from './commands';
 import { CardCompletionItemProvider, SearchCompletionItemProvider } from './completion_providers';
@@ -75,6 +76,39 @@ export async function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
+	// TODO: On selection change compute stats: num. cards, mana distribution, type distribution.
+	let statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
+	vscode.window.onDidChangeTextEditorSelection(async (e) => {
+		let cardLines: CardLine[] = [];
+		for (const selection of e.selections) {
+			for (let l = selection.start.line; l <= selection.end.line; l++) {
+				const lineStr = e.textEditor.document.lineAt(l).text;
+				try {
+					const cardLine = await parseCardLine(lineStr, cardDB);
+					cardLines.push(cardLine);
+				}
+				catch (e) {
+					continue;
+				}
+			}
+		}
+
+		if (cardLines.length < 2) {
+			statusBarItem.hide();
+			return;
+		}
+
+		const numCardsInSelection = getNumberOfCards(cardLines);
+		statusBarItem.text = `${numCardsInSelection} cards`;
+
+		if (numCardsInSelection > 0) {
+			statusBarItem.show();
+		} else {
+			statusBarItem.hide();
+		}
+
+	});
+
 	vscode.window.onDidChangeActiveTextEditor((e) => {
 		if (!e) {
 			return;
@@ -84,9 +118,9 @@ export async function activate(context: vscode.ExtensionContext) {
 	});
 
 	const editors = vscode.window.visibleTextEditors.filter((editor) => editor.document.languageId === languageID);
-		for (const editor of editors) {
-			await setCardDecorations(editor, cardDB);
-		}
+	for (const editor of editors) {
+		await setCardDecorations(editor, cardDB);
+	}
 }
 
 // this method is called when your extension is deactivated
