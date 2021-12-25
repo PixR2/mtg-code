@@ -68,6 +68,7 @@ export interface Card {
     rarity?: string;
     watermark?: string;
     flavorText?: string;
+    flavorName?: string;
     cardBackID?: string;
     artist?: string;
     artistIDS?: string[];
@@ -75,6 +76,7 @@ export interface Card {
     borderColor?: string;
     frame?: string;
     frameEffects?: string[];
+    securityStamp?: string;
     fullArt?: boolean;
     textless?: boolean;
     booster?: boolean;
@@ -108,6 +110,7 @@ export interface CardFace {
     power?: string;
     toughness?: string;
     flavorText?: string;
+    flavorName?: string;
     artist?: string;
     artistID?: string;
     illustrationID?: string;
@@ -137,6 +140,7 @@ export interface Legalities {
     commander?: string;
     brawl?: string;
     historicbrawl?: string;
+    alchemy?: string;
     paupercommander?: string;
     duel?: string;
     oldschool?: string;
@@ -383,6 +387,7 @@ const typeMap: any = {
         { json: "rarity", js: "rarity", typ: u(undefined, "") },
         { json: "watermark", js: "watermark", typ: u(undefined, "") },
         { json: "flavor_text", js: "flavorText", typ: u(undefined, "") },
+        { json: "flavor_name", js: "flavorName", typ: u(undefined, "") },
         { json: "card_back_id", js: "cardBackID", typ: u(undefined, "") },
         { json: "artist", js: "artist", typ: u(undefined, "") },
         { json: "artist_ids", js: "artistIDS", typ: u(undefined, a("")) },
@@ -390,6 +395,8 @@ const typeMap: any = {
         { json: "border_color", js: "borderColor", typ: u(undefined, "") },
         { json: "frame", js: "frame", typ: u(undefined, "") },
         { json: "frame_effects", js: "frameEffects", typ: u(undefined, a("")) },
+        { json: "security_stamp", js: "securityStamp", typ: u(undefined, "") },
+        
         { json: "full_art", js: "fullArt", typ: u(undefined, true) },
         { json: "textless", js: "textless", typ: u(undefined, true) },
         { json: "booster", js: "booster", typ: u(undefined, true) },
@@ -420,6 +427,7 @@ const typeMap: any = {
         { json: "power", js: "power", typ: u(undefined, "") },
         { json: "toughness", js: "toughness", typ: u(undefined, "") },
         { json: "flavor_text", js: "flavorText", typ: u(undefined, "") },
+        { json: "flavor_name", js: "flavorName", typ: u(undefined, "") },
         { json: "loyalty", js: "loyalty", typ: u(undefined, "") },
         { json: "artist", js: "artist", typ: u(undefined, "") },
         { json: "artist_id", js: "artistID", typ: u(undefined, "") },
@@ -449,6 +457,7 @@ const typeMap: any = {
         { json: "commander", js: "commander", typ: u(undefined, "") },
         { json: "brawl", js: "brawl", typ: u(undefined, "") },
         { json: "historicbrawl", js: "historicbrawl", typ: u(undefined, "") },
+        { json: "alchemy", js: "alchemy", typ: u(undefined, "") },
         { json: "paupercommander", js: "paupercommander", typ: u(undefined, "") },
         { json: "duel", js: "duel", typ: u(undefined, "") },
         { json: "oldschool", js: "oldschool", typ: u(undefined, "") },
