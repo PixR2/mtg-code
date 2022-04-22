@@ -132,6 +132,7 @@ export interface Legalities {
     historic?: string;
     gladiator?: string;
     pioneer?: string;
+    explorer?: string;
     modern?: string;
     legacy?: string;
     pauper?: string;
@@ -449,6 +450,7 @@ const typeMap: any = {
         { json: "historic", js: "historic", typ: u(undefined, "") },
         { json: "gladiator", js: "gladiator", typ: u(undefined, "") },
         { json: "pioneer", js: "pioneer", typ: u(undefined, "") },
+        { json: "explorer", js: "explorer", typ: u(undefined, "") },
         { json: "modern", js: "modern", typ: u(undefined, "") },
         { json: "legacy", js: "legacy", typ: u(undefined, "") },
         { json: "pauper", js: "pauper", typ: u(undefined, "") },
