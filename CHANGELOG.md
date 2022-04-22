@@ -11,3 +11,7 @@ All notable changes to the "mtg-code" extension will be documented in this file.
 - Card search using scryfall's advanced query API.
 - Autocompletion for query terms and for some query parameter values in card search lines.
 - Display card count when selecting multiple lines.
+
+## [1.0.1] - 2022-04-22
+### Fixed
+- Fixed card parsing by adding the explorer format.
