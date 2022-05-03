@@ -83,6 +83,7 @@ export interface Card {
     storySpotlight?: boolean;
     promoTypes?: string[];
     edhrecRank?: number;
+    pennyRank?: number;
     prices?: Prices;
     preview?: Preview;
     relatedUris?: RelatedUris;
@@ -404,6 +405,7 @@ const typeMap: any = {
         { json: "story_spotlight", js: "storySpotlight", typ: u(undefined, true) },
         { json: "promo_types", js: "promoTypes", typ: u(undefined, a("")) },
         { json: "edhrec_rank", js: "edhrecRank", typ: u(undefined, 0) },
+        { json: "penny_rank", js: "pennyRank", typ: u(undefined, 0) },
         { json: "prices", js: "prices", typ: u(undefined, r("Prices")) },
         { json: "preview", js: "preview", typ: u(undefined, r("Preview")) },
         { json: "related_uris", js: "relatedUris", typ: u(undefined, r("RelatedUris")) },
