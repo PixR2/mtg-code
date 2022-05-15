@@ -15,3 +15,7 @@ All notable changes to the "mtg-code" extension will be documented in this file.
 ## [1.0.1] - 2022-04-22
 ### Fixed
 - Fixed card parsing by adding the explorer format.
+
+## [1.0.2] - 2022-04-22
+### Fixed
+- Fixed card parsing for cards which included a 'penny_rank' field.
