@@ -12,7 +12,8 @@ import { CardSearchLensProvider } from './code_lens_providers';
 import { searchCards } from './commands';
 import { CardCompletionItemProvider, SearchCompletionItemProvider } from './completion_providers';
 import { setCardDecorations } from './decorators';
-import { CardHoverProvider, CardSearchHoverProvider } from './hover_providers';
+import { CardHoverProvider } from './hover_providers';
+import { FixCardNameCodeActionProvider, refreshCardDiagnostics } from './diagnostics';
 
 const languageID: string = 'mtg';
 
@@ -65,7 +66,10 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(vscode.languages.registerCodeLensProvider(languageID, new CardSearchLensProvider()));
 
-	vscode.workspace.onDidChangeTextDocument(async (e) => {
+	const cardDiagnostics = vscode.languages.createDiagnosticCollection("cards");
+	context.subscriptions.push(cardDiagnostics);
+
+	context.subscriptions.push(vscode.workspace.onDidChangeTextDocument(async (e) => {
 		if (e.document.languageId !== languageID) {
 			return;
 		}
@@ -73,12 +77,13 @@ export async function activate(context: vscode.ExtensionContext) {
 		const editors = vscode.window.visibleTextEditors.filter((editor) => editor.document === e.document);
 		for (const editor of editors) {
 			await setCardDecorations(editor, cardDB);
+			await refreshCardDiagnostics(editor.document, cardDiagnostics, cardDB);
 		}
-	});
+	}));
 
 	// TODO: On selection change compute stats: num. cards, mana distribution, type distribution.
 	let statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
-	vscode.window.onDidChangeTextEditorSelection(async (e) => {
+	context.subscriptions.push(vscode.window.onDidChangeTextEditorSelection(async (e) => {
 		let cardLines: CardLine[] = [];
 		for (const selection of e.selections) {
 			for (let l = selection.start.line; l <= selection.end.line; l++) {
@@ -106,20 +111,31 @@ export async function activate(context: vscode.ExtensionContext) {
 		} else {
 			statusBarItem.hide();
 		}
+	}));
 
-	});
-
-	vscode.window.onDidChangeActiveTextEditor((e) => {
+	context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor((e) => {
 		if (!e) {
 			return;
 		}
 
 		setCardDecorations(e, cardDB);
-	});
+		refreshCardDiagnostics(e.document, cardDiagnostics, cardDB);
+	}));
+
+	context.subscriptions.push(
+		vscode.workspace.onDidCloseTextDocument(document => cardDiagnostics.delete(document.uri))
+	);
+
+	context.subscriptions.push(
+		vscode.languages.registerCodeActionsProvider(languageID, new FixCardNameCodeActionProvider(cardDB), {
+			providedCodeActionKinds: FixCardNameCodeActionProvider.providedCodeActionKinds
+		})
+	);
 
 	const editors = vscode.window.visibleTextEditors.filter((editor) => editor.document.languageId === languageID);
 	for (const editor of editors) {
 		await setCardDecorations(editor, cardDB);
+		await refreshCardDiagnostics(editor.document, cardDiagnostics, cardDB);
 	}
 }
 

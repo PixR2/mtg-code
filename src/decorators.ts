@@ -2,11 +2,9 @@ import { info } from 'console';
 import * as vscode from 'vscode';
 import { Card } from './card';
 import { CardDB } from './card_db';
+import { lineSplitterRegExp, cardLineRegExp } from './regular_expressions';
 
 const cardDecorationType: vscode.TextEditorDecorationType = vscode.window.createTextEditorDecorationType({});
-
-const lineSplitterRegexp: RegExp = /\r?\n/g;
-let cardLineRegexp: RegExp = /^(\d+) +(.+)$/;
 
 export async function setCardDecorations(editor: vscode.TextEditor, cardDB: CardDB) {
     await vscode.window.withProgress({
@@ -16,13 +14,13 @@ export async function setCardDecorations(editor: vscode.TextEditor, cardDB: Card
     }, async (progress) => {
         let decorations: vscode.DecorationOptions[] = [];
 
-        const lines: string[] = editor.document.getText().split(lineSplitterRegexp);
+        const lines: string[] = editor.document.getText().split(lineSplitterRegExp);
         for (const [lineNum, line] of lines.entries()) {
             progress.report({
                 increment: (lineNum / lines.length) * 100.0
             });
 
-            const search = cardLineRegexp.exec(line);
+            const search = cardLineRegExp.exec(line);
             if (!search || search.length !== 3) {
                 continue;
             }
