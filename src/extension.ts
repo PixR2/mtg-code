@@ -7,7 +7,7 @@ import { stringify } from 'querystring';
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 import { CardDB } from './card_db';
-import { CardLine, getNumberOfCards, parseCardLine } from './card_statistics';
+import { CardLine, getNumberOfCards, parseCardLine, getManaCostDistribution, renderManaCostDistributionToString, computeMeanManaCost } from './card_statistics';
 import { CardSearchLensProvider } from './code_lens_providers';
 import { searchCards } from './commands';
 import { CardCompletionItemProvider, SearchCompletionItemProvider } from './completion_providers';
@@ -104,13 +104,21 @@ export async function activate(context: vscode.ExtensionContext) {
 		}
 
 		const numCardsInSelection = getNumberOfCards(cardLines);
-		statusBarItem.text = `${numCardsInSelection} cards`;
 
-		if (numCardsInSelection > 0) {
-			statusBarItem.show();
-		} else {
+		if (numCardsInSelection === 0) {
 			statusBarItem.hide();
+			return;
 		}
+
+		let statusText = `${numCardsInSelection} cards`;
+
+		const manaCostDistribution = getManaCostDistribution(cardLines);
+		if (manaCostDistribution.length !== 0) {
+			statusText += `; Mana Curve (avg=${computeMeanManaCost(manaCostDistribution).toFixed(1)}): ${renderManaCostDistributionToString(manaCostDistribution)}`;
+		}
+
+		statusBarItem.text = statusText;
+		statusBarItem.show();
 	}));
 
 	context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor((e) => {
