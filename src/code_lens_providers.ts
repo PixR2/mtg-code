@@ -1,23 +1,20 @@
 import * as vscode from 'vscode';
-import { Card } from './card';
+import { lineSplitterRegExp, searchLineRegExp } from './regular_expressions';
 
 export class CardSearchLensProvider implements vscode.CodeLensProvider {
-    lineRegexp: RegExp = /^\/\/ *Search: *(.*?) *$/i;
-    lineSplitterRegexp: RegExp = /\r?\n/g;
-    
-    constructor() {}
+    constructor() { }
 
     onDidChangeCodeLenses?: vscode.Event<void> | undefined;
-    provideCodeLenses(document: vscode.TextDocument, token: vscode.CancellationToken):  vscode.ProviderResult<vscode.CodeLens[]> {
-        const lines: string[] = document.getText().split(this.lineSplitterRegexp);
-        
+    provideCodeLenses(document: vscode.TextDocument, token: vscode.CancellationToken): vscode.ProviderResult<vscode.CodeLens[]> {
+        const lines: string[] = document.getText().split(lineSplitterRegExp);
+
         let codeLenses: vscode.CodeLens[] = [];
         for (const [lineNum, line] of lines.entries()) {
-            const search = this.lineRegexp.exec(line);
+            const search = searchLineRegExp.exec(line);
             if (!search || search.length !== 2) {
                 continue;
             }
-            
+
             let searchStr: string = search[1].trim();
             const cmd: vscode.Command = {
                 command: 'mtg-code.search-cards',
