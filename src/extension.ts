@@ -2,7 +2,6 @@
 
 'use strict';
 import * as fs from 'fs';
-import { stringify } from 'querystring';
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
@@ -14,6 +13,7 @@ import { CardCompletionItemProvider, SearchCompletionItemProvider } from './comp
 import { setCardDecorations } from './decorators';
 import { CardHoverProvider } from './hover_providers';
 import { FixCardNameCodeActionProvider, refreshCardDiagnostics } from './diagnostics';
+import { CommentLineFoldingRangeProvider } from './folding_range_providers';
 
 const languageID: string = 'mtg';
 
@@ -138,6 +138,10 @@ export async function activate(context: vscode.ExtensionContext) {
 		vscode.languages.registerCodeActionsProvider(languageID, new FixCardNameCodeActionProvider(cardDB), {
 			providedCodeActionKinds: FixCardNameCodeActionProvider.providedCodeActionKinds
 		})
+	);
+
+	context.subscriptions.push(
+		vscode.languages.registerFoldingRangeProvider(languageID, new CommentLineFoldingRangeProvider())
 	);
 
 	const editors = vscode.window.visibleTextEditors.filter((editor) => editor.document.languageId === languageID);
