@@ -8,7 +8,7 @@ import * as vscode from 'vscode';
 import { CardDB } from './card_db';
 import { CardLine, getNumberOfCards, parseCardLine, getManaCostDistribution, renderManaCostDistributionToString, computeMeanManaCost } from './card_statistics';
 import { CardSearchLensProvider } from './code_lens_providers';
-import { searchCards } from './commands';
+import { searchCards, showCardRulings } from './commands';
 import { CardCompletionItemProvider, SearchCompletionItemProvider } from './completion_providers';
 import { setCardDecorations } from './decorators';
 import { CardHoverProvider } from './hover_providers';
@@ -27,6 +27,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	await cardDB.isReady;
 
 	context.subscriptions.push(vscode.commands.registerCommand('mtg-code.search-cards', searchCards(cardDB)));
+	context.subscriptions.push(vscode.commands.registerCommand('mtg-code.show-card-rulings', showCardRulings(cardDB)));
 
 	const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz '\":/<>=".split("");
 
@@ -62,7 +63,6 @@ export async function activate(context: vscode.ExtensionContext) {
 	);
 
 	context.subscriptions.push(vscode.languages.registerHoverProvider(languageID, new CardHoverProvider(cardDB)));
-	// context.subscriptions.push(vscode.languages.registerHoverProvider(languageID, new CardSearchHoverProvider(cardDB)));
 
 	context.subscriptions.push(vscode.languages.registerCodeLensProvider(languageID, new CardSearchLensProvider()));
 
@@ -114,7 +114,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 		const manaCostDistribution = getManaCostDistribution(cardLines);
 		if (manaCostDistribution.length !== 0) {
-			statusText += `; Mana Curve (avg=${computeMeanManaCost(manaCostDistribution).toFixed(1)}): ${renderManaCostDistributionToString(manaCostDistribution)}`;
+			statusText += `; avg. cmc=${computeMeanManaCost(manaCostDistribution).toFixed(1)}`;
 		}
 
 		statusBarItem.text = statusText;

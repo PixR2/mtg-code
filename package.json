@@ -13,7 +13,8 @@
 	],
 	"activationEvents": [
 		"onLanguage:mtg",
-		"onCommand:mtg-code.search-cards"
+		"onCommand:mtg-code.search-cards",
+		"onCommand:mtg-code.show-card-rulings"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
@@ -40,7 +41,14 @@
 			{
 				"command": "mtg-code.search-cards",
 				"title": "Search Cards",
-				"category": "mtg"
+				"category": "mtg",
+				"when": "editorLangId == mtg"
+			},
+			{
+				"command": "mtg-code.show-card-rulings",
+				"title": "Show Card Rulings",
+				"category": "mtg",
+				"when": "editorLangId == mtg"
 			}
 		]
 	},

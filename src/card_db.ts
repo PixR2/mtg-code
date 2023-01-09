@@ -3,7 +3,9 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as fuzzy from 'fuzzy';
 
-import { Convert, Card } from "./card";
+import { Card, toCard, toCardFromObject } from "./card";
+import { RulingsResponse, Ruling, toRulingsResponse } from "./card_rulings";
+import { assert } from "console";
 
 export class CardDB {
     public isReady: Promise<any>;
@@ -31,6 +33,7 @@ export class CardDB {
     // TODO: Make cards and advancedSearches discard old (e.g. > 24h) entries.
     cards: Map<string, Card | null> = new Map();
     advancedSearches: Map<string, string[]> = new Map();
+    rulings: Map<string, Ruling[]> = new Map();
 
     constructor(dbDirectoryPath: string = '.', maxDBAge: number = 7 * 24 * 60 * 60 * 1000) {
         this.dbDirectoryPath = dbDirectoryPath;
@@ -175,7 +178,7 @@ export class CardDB {
 
             var newCard: Card;
             try {
-                newCard = Convert.toCard(cardJSONStr);
+                newCard = toCard(cardJSONStr);
             }
             catch (e) {
                 throw Error(`failed to parse card information from scryfall api: ${e}\n\nJSON String:\n\n${cardJSONStr}`);
@@ -218,7 +221,7 @@ export class CardDB {
         searchResp['data'].forEach((cardJSON: any) => {
             let card: Card;
             try {
-                card = Convert.toCardFromObject(cardJSON);
+                card = toCardFromObject(cardJSON);
                 if (card.name === undefined) {
                     return;
                 }
@@ -400,5 +403,43 @@ export class CardDB {
             'mtgo',
             'arena'
         ];
+    }
+
+    async getCardRulings(card: Card): Promise<Ruling[]> {
+        if (card.id === undefined) {
+            throw Error("card has no id");
+        }
+
+        if (card.rulingsURI === undefined) {
+            return [];
+        }
+
+        const rulings = this.rulings.get(card.id);
+        if (rulings !== undefined) {
+            return rulings;
+        }
+
+        var rulingsRespJSONStr: string = '';
+        try {
+            const rulingsResp = await request.get(card.rulingsURI, { throwResponseError: true });
+            rulingsRespJSONStr = rulingsResp.content;
+        }
+        catch (e) {
+            throw Error(`request to scryfall api failed: ${e}`);
+        }
+
+        var parsedRulingsResp: RulingsResponse;
+        try {
+            parsedRulingsResp = toRulingsResponse(rulingsRespJSONStr);
+        }
+        catch (e) {
+            throw Error(`failed to parse rulings information from scryfall api: ${e}\n\nJSON String:\n\n${rulingsRespJSONStr}`);
+        }
+
+        const newRulings = parsedRulingsResp.data === undefined ? [] : parsedRulingsResp.data;
+
+        this.rulings.set(card.id, newRulings);
+
+        return newRulings;
     }
 }

@@ -179,20 +179,16 @@ export interface RelatedUris {
     mtgtop8?: string;
 }
 
-// Converts JSON strings to/from your types
-// and asserts the results of JSON.parse at runtime
-export class Convert {
-    public static toCardFromObject(json: object): Card {
-        return cast(json, r("Card"));
-    }
+export function toCardFromObject(json: object): Card {
+    return cast(json, r("Card"));
+}
 
-    public static toCard(json: string): Card {
-        return cast(JSON.parse(json), r("Card"));
-    }
+export function toCard(json: string): Card {
+    return cast(JSON.parse(json), r("Card"));
+}
 
-    public static cardToJson(value: Card): string {
-        return JSON.stringify(uncast(value, r("Card")), null, 2);
-    }
+export function cardToJson(value: Card): string {
+    return JSON.stringify(uncast(value, r("Card")), null, 2);
 }
 
 function invalidValue(typ: any, val: any, key: any = ''): never {

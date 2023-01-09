@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { CardDB } from './card_db';
 import { Card } from './card';
+import { cardLineRegExp } from './regular_expressions';
 
 function getMarkdownImagesLine(card: Card): string | undefined {
     let oracleText = card.oracleText ?
@@ -20,6 +21,24 @@ function getPriceLine(card: Card): string | undefined {
     return `**Price:** ${usdPrice}$ / ${eurPrice}€`;
 }
 
+function getRulingsLine(card: Card): string | undefined {
+    if (card.name === undefined) {
+        return undefined;
+    }
+
+    if (card.rulingsURI === undefined) {
+        return undefined;
+    }
+
+    const args = [card.name];
+    const showRulingsCommandUri = vscode.Uri.parse(
+        `command:mtg-code.show-card-rulings?${encodeURIComponent(JSON.stringify(args))}`
+    );
+
+    const rulingsLine = `[Show Rulings](${showRulingsCommandUri})`;
+    return rulingsLine;
+}
+
 export class CardHoverProvider implements vscode.HoverProvider {
     cardDB: CardDB;
 
@@ -32,19 +51,32 @@ export class CardHoverProvider implements vscode.HoverProvider {
         position: vscode.Position,
         token: vscode.CancellationToken):
         Promise<vscode.Hover> {
-        let regexp: RegExp = /^(\d+) +(.+)$/;
-        let search = regexp.exec(document.lineAt(position.line).text);
+        let search = cardLineRegExp.exec(document.lineAt(position.line).text);
 
         if (!search || search.length < 3) {
             return new vscode.Hover('');
         }
 
-        let cardName = search[2].trim();
+        const cardName = search[2].trim();
         try {
+            let lines: string[] = [];
+
             let card = await this.cardDB.getCard(cardName);
-            let imagesLine = getMarkdownImagesLine(card);
-            let priceLine = getPriceLine(card);
-            return new vscode.Hover(new vscode.MarkdownString(`${imagesLine}\n\n${priceLine}`));
+            const imagesLine = getMarkdownImagesLine(card);
+            if (imagesLine !== undefined) {
+                lines.push(imagesLine);
+            }
+
+            const priceLine = getPriceLine(card);
+            if (priceLine !== undefined) {
+                lines.push(priceLine);
+            }
+
+            const markdownStr = new vscode.MarkdownString(
+                lines.join('\n\n')
+            );
+
+            return new vscode.Hover(markdownStr);
         }
         catch (e) {
             return new vscode.Hover(new vscode.MarkdownString(`failed to get card from card database: ${e}`));
