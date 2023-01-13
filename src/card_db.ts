@@ -30,7 +30,6 @@ export class CardDB {
     abilityWords: string[] = [];
     setNames: string[] = [];
 
-    // TODO: Make cards and advancedSearches discard old (e.g. > 24h) entries.
     cards: Map<string, Card | null> = new Map();
     advancedSearches: Map<string, string[]> = new Map();
     rulings: Map<string, Ruling[]> = new Map();
