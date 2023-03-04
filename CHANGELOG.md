@@ -20,11 +20,13 @@ All notable changes to the "mtg-code" extension will be documented in this file.
 ### Fixed
 - Fixed card parsing for cards which included a 'penny_rank' field.
 
-## [1.1.0] - 2023-04-22
+## [1.1.0] - 2023-03-04
 ### Added
 - Show average converted mana cost of cards in selection in the status bar.
 - Folding ranges for all blocks starting with a comment line (comment or search line).
 - Command to show a card's rulings.
+- Syntax highlighting support for *'or'* and parenthesis.
 
 ### Fixed
 - Syntax highlighting for quoted fields.
+- Prevent the extension from breaking in case new fields are added to scryfall's API.
