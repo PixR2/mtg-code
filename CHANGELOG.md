@@ -20,7 +20,11 @@ All notable changes to the "mtg-code" extension will be documented in this file.
 ### Fixed
 - Fixed card parsing for cards which included a 'penny_rank' field.
 
-## [1.1.0] - 2022-04-22
+## [1.1.0] - 2023-04-22
 ### Added
-- Show mana curve of cards in selection in the status bar.
+- Show average converted mana cost of cards in selection in the status bar.
 - Folding ranges for all blocks starting with a comment line (comment or search line).
+- Command to show a card's rulings.
+
+### Fixed
+- Syntax highlighting for quoted fields.
