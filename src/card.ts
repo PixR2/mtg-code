@@ -406,7 +406,7 @@ const typeMap: any = {
         { json: "preview", js: "preview", typ: u(undefined, r("Preview")) },
         { json: "related_uris", js: "relatedUris", typ: u(undefined, r("RelatedUris")) },
         { json: "purchase_uris", js: "purchaseUris", typ: u(undefined, r("PurchaseUris")) },
-    ], false),
+    ], "any"),
     "AllPart": o([
         { json: "object", js: "object", typ: u(undefined, "") },
         { json: "id", js: "id", typ: u(undefined, "") },
@@ -414,7 +414,7 @@ const typeMap: any = {
         { json: "name", js: "name", typ: u(undefined, "") },
         { json: "type_line", js: "typeLine", typ: u(undefined, "") },
         { json: "uri", js: "uri", typ: u(undefined, "") },
-    ], false),
+    ], "any"),
     "CardFace": o([
         { json: "object", js: "object", typ: u(undefined, "") },
         { json: "name", js: "name", typ: u(undefined, "") },
@@ -433,7 +433,7 @@ const typeMap: any = {
         { json: "illustration_id", js: "illustrationID", typ: u(undefined, "") },
         { json: "image_uris", js: "imageUris", typ: u(undefined, r("ImageUris")) },
         { json: "color_indicator", js: "colorIndicator", typ: u(undefined, a("")) },
-    ], false),
+    ], "any"),
     "ImageUris": o([
         { json: "small", js: "small", typ: u(undefined, "") },
         { json: "normal", js: "normal", typ: u(undefined, "") },
@@ -441,7 +441,7 @@ const typeMap: any = {
         { json: "png", js: "png", typ: u(undefined, "") },
         { json: "art_crop", js: "artCrop", typ: u(undefined, "") },
         { json: "border_crop", js: "borderCrop", typ: u(undefined, "") },
-    ], false),
+    ], "any"),
     "Legalities": o([
         { json: "standard", js: "standard", typ: u(undefined, "") },
         { json: "future", js: "future", typ: u(undefined, "") },
@@ -462,12 +462,12 @@ const typeMap: any = {
         { json: "duel", js: "duel", typ: u(undefined, "") },
         { json: "oldschool", js: "oldschool", typ: u(undefined, "") },
         { json: "premodern", js: "premodern", typ: u(undefined, "") },
-    ], false),
+    ], "any"),
     "Preview": o([
         { json: "source", js: "source", typ: u(undefined, "") },
         { json: "source_uri", js: "sourceURI", typ: u(undefined, "") },
         { json: "previewed_at", js: "previewedAt", typ: u(undefined, Date) },
-    ], false),
+    ], "any"),
     "Prices": o([
         { json: "usd", js: "usd", typ: u(undefined, "", null) },
         { json: "usd_foil", js: "usdFoil", typ: u(undefined, "", null) },
@@ -476,17 +476,17 @@ const typeMap: any = {
         { json: "eur_foil", js: "eurFoil", typ: u(undefined, "", null) },
         { json: "eur_etched", js: "eurEtched", typ: u(undefined, "", null) },
         { json: "tix", js: "tix", typ: u(undefined, "", null) },
-    ], false),
+    ], "any"),
     "PurchaseUris": o([
         { json: "tcgplayer", js: "tcgplayer", typ: u(undefined, "") },
         { json: "cardmarket", js: "cardmarket", typ: u(undefined, "") },
         { json: "cardhoarder", js: "cardhoarder", typ: u(undefined, "") },
-    ], false),
+    ], "any"),
     "RelatedUris": o([
         { json: "gatherer", js: "gatherer", typ: u(undefined, "") },
         { json: "tcgplayer_infinite_articles", js: "tcgplayerInfiniteArticles", typ: u(undefined, "") },
         { json: "tcgplayer_infinite_decks", js: "tcgplayerInfiniteDecks", typ: u(undefined, "") },
         { json: "edhrec", js: "edhrec", typ: u(undefined, "") },
         { json: "mtgtop8", js: "mtgtop8", typ: u(undefined, "") },
-    ], false),
+    ], "any"),
 };
