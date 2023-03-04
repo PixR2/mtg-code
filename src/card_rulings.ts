@@ -166,12 +166,12 @@ const typeMap: any = {
         { json: "object", js: "object", typ: u(undefined, "") },
         { json: "has_more", js: "hasMore", typ: u(undefined, true) },
         { json: "data", js: "data", typ: u(undefined, a(r("Datum"))) },
-    ], false),
+    ], "any"),
     "Datum": o([
         { json: "object", js: "object", typ: u(undefined, "") },
         { json: "oracle_id", js: "oracleID", typ: u(undefined, "") },
         { json: "source", js: "source", typ: u(undefined, "") },
         { json: "published_at", js: "publishedAt", typ: u(undefined, Date) },
         { json: "comment", js: "comment", typ: u(undefined, "") },
-    ], false),
+    ], "any"),
 };
