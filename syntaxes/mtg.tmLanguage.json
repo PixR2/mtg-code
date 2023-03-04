@@ -32,6 +32,14 @@
 									"name": "string.unquoted.mtg"
 								}
 							}
+						},
+						{
+							"match": " (or|OR) ",
+							"captures": {
+								"1": {
+									"name": "keyword.operator.mtg"
+								}
+							}
 						}
 					]
 				}
