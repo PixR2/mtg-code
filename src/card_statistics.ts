@@ -49,6 +49,32 @@ export function getNumberOfCards(cardLines: CardLine[]): number {
     return numCards;
 }
 
+export function getTotalCostOfCards(cardLines: CardLine[]): [number, number] {
+    if (cardLines.length === 0) {
+        return [0, 0];
+    }
+
+    const totalCost = cardLines
+        .map((cardLine): [number, number] => {
+            const priceInUSD = cardLine.card.prices?.usd ? Number(cardLine.card.prices?.usd) : cardLine.card.prices?.usdFoil ? Number(cardLine.card.prices?.usdFoil) : 0;
+            const priceInEUR = cardLine.card.prices?.eur ? Number(cardLine.card.prices?.eur) : cardLine.card.prices?.eurFoil ? Number(cardLine.card.prices?.eurFoil) : 0;
+
+            if (isNaN(priceInUSD) || isNaN(priceInEUR)) {
+                return [0, 0];
+            }
+
+            return [
+                priceInUSD * cardLine.quantity,
+                priceInEUR * cardLine.quantity
+            ];
+        })
+        .reduce((totalCost, cardLineCost): [number, number] => {
+            return [totalCost[0] + cardLineCost[0], totalCost[1] + cardLineCost[1]];
+        });
+
+    return totalCost;
+}
+
 export function getManaCostDistribution(cardLines: CardLine[]): number[] {
     if (cardLines.length === 0) {
         return [];
