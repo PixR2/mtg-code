@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { CardDB } from './card_db';
 import * as fuzzy from 'fuzzy';
+import { log } from 'console';
 
 export class CardCompletionItemProvider implements vscode.CompletionItemProvider {
     cardDB: CardDB;
@@ -36,7 +37,7 @@ export class SearchCompletionItemProvider implements vscode.CompletionItemProvid
     searchParameterVocabularies: Map<string, string[]>;
 
     lineRegexp: RegExp = /^(\/\/ *Search:)([^;]*).*$/;
-    searchTermRegexp: RegExp = /([^; \n]+?)(:|=|>=|<=|<|>)((?:\"[^\"]*\")|(?:\/[^\"]*\/)|(?:\\'[^\"]*\\')|(?:[^; \n]*))/g;
+    searchTermRegexp: RegExp = /(-{0,1})([^; \n()]+?)(:|=|>=|<=|<|>)((?:\"[^\"]*\")|(?:\/[^\/]*\/)|(?:'[^']*')|(?:[^; \n\"'\/()]*))/g;
 
     constructor(searchParameters: string[], searchParameterVocabularies: Map<string, string[]>) {
         this.searchParameters = searchParameters;
@@ -67,13 +68,13 @@ export class SearchCompletionItemProvider implements vscode.CompletionItemProvid
             }
 
             let sti = searchTerm.index;
-            if (position.character < queryStart + searchTerm.index || position.character > queryStart + searchTerm.index + searchTerm[0].length) {
+            if (position.character < queryStart + sti || position.character > queryStart + sti + searchTerm[0].length) {
                 continue;
             }
 
-            if (position.character < queryStart + searchTerm.index + searchTerm[1].length + searchTerm[2].length) {
-                let possibleParameters = fuzzy.filter(searchTerm[1], this.searchParameters);
-                let insertAt = queryStart + sti;
+            if (position.character < queryStart + sti + searchTerm[1].length + searchTerm[2].length + searchTerm[3].length) {
+                let possibleParameters = fuzzy.filter(searchTerm[2], this.searchParameters);
+                let insertAt = queryStart + sti + searchTerm[1].length;
                 return possibleParameters.map((param) => {
                     let item: vscode.CompletionItem = new vscode.CompletionItem(param.string);
                     item.range = new vscode.Range(new vscode.Position(position.line, insertAt), new vscode.Position(position.line, queryStart + sti + searchTerm[1].length));
@@ -82,14 +83,15 @@ export class SearchCompletionItemProvider implements vscode.CompletionItemProvid
                 });
             }
 
-            const paramName = searchTerm[1];
+            const paramName = searchTerm[2];
             const paramVocabulary = this.searchParameterVocabularies.get(paramName);
             if (!paramVocabulary) {
                 return [];
             }
 
-            const possibleParameterValues = fuzzy.filter(searchTerm[3], paramVocabulary);
-            const insertAt = queryStart + searchTerm.index + searchTerm[1].length + searchTerm[2].length;
+            const possibleParameterValues = fuzzy.filter(searchTerm[4], paramVocabulary);
+            
+            const insertAt = queryStart + sti + searchTerm[1].length + searchTerm[2].length + searchTerm[3].length;
             return possibleParameterValues.map((paramValue) => {
                 let finalParameterValue = paramValue.string.includes(' ') ? `"${paramValue.string}"` : paramValue.string;
                 let item: vscode.CompletionItem = new vscode.CompletionItem(finalParameterValue);
