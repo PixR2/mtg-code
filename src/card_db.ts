@@ -2,15 +2,17 @@ import * as request from "web-request";
 import * as fs from 'fs';
 import * as path from 'path';
 import * as fuzzy from 'fuzzy';
+import * as vscode from 'vscode';
 
 import { Card, toCard, toCardFromObject } from "./card";
 import { RulingsResponse, Ruling, toRulingsResponse } from "./card_rulings";
 import { assert } from "console";
+import { TextDecoder, TextEncoder } from "util";
 
 export class CardDB {
     public isReady: Promise<any>;
 
-    dbDirectoryPath: string = '.';
+    dbDirectoryPath: vscode.Uri;
     maxDBAge: number = 7 * 24 * 60 * 60 * 1000;
 
     cardNames: string[] = [];
@@ -34,128 +36,108 @@ export class CardDB {
     advancedSearches: Map<string, string[]> = new Map();
     rulings: Map<string, Ruling[]> = new Map();
 
-    constructor(dbDirectoryPath: string = '.', maxDBAge: number = 7 * 24 * 60 * 60 * 1000) {
+    constructor(dbDirectoryPath: vscode.Uri, maxDBAge: number = 7 * 24 * 60 * 60 * 1000) {
         this.dbDirectoryPath = dbDirectoryPath;
         this.maxDBAge = maxDBAge;
         this.isReady = this.init();
     }
 
-    // TODO: Add command to manually reload catalog data.
-    async loadCatalog(scryfallURI: string, dbFilePath: string, maxDBAge: number): Promise<any> {
-        if (!fs.existsSync(dbFilePath)) {
-            let resp: any;
-            try {
-                resp = await request.json<any>(scryfallURI, { throwResponseError: true });
-            } catch (requestException) {
-                throw Error(`failed to load catalog data: no catalog db file at '${dbFilePath}' and request to scryfall failed with '${requestException}'`);
-            }
-
-            try {
-                fs.writeFileSync(dbFilePath, JSON.stringify(resp));
-            }
-            catch (writeException) {
-                console.log(`failed to write catalog db file: ${writeException}`);
-            }
-
-            return resp;
-        }
-
-        const fileStats = fs.statSync(dbFilePath);
-        if (fileStats.mtime.getTime() < Date.now() - maxDBAge) {
-            let resp: any;
-            try {
-                resp = await request.json<any>(scryfallURI, { throwResponseError: true });
-            } catch (requestException) {
-                try {
-                    const respStr = fs.readFileSync(dbFilePath).toString();
-                    return JSON.parse(respStr);
-                }
-                catch (readException) {
-                    throw Error(`failed to load catalog data: failed to load catalog from '${dbFilePath}' (${readException}) and request to scryfall failed with '${requestException}'`);
-                }
-            }
-
-            try {
-                fs.writeFileSync(dbFilePath, JSON.stringify(resp));
-            }
-            catch (writeException) {
-                console.log(`failed to write catalog db file: ${writeException}`);
-            }
-
-            return resp;
+    async fetchCatalog(scryfallURI: string, dbFilePath: vscode.Uri): Promise<any> {
+        let resp: any;
+        try {
+            resp = await request.json<any>(scryfallURI, { throwResponseError: true });
+        } catch (requestException) {
+            throw Error(`failed to fetch catalog data: equest to scryfall failed with '${requestException}'`);
         }
 
         try {
-            const respStr = fs.readFileSync(dbFilePath).toString();
-            return JSON.parse(respStr);
+            await vscode.workspace.fs.writeFile(dbFilePath, new TextEncoder().encode(JSON.stringify(resp)));
+        } catch (writeException) {
+            throw Error(`failed to write catalog data to file: ${writeException}`);
         }
-        catch (readException) {
-            let resp: any;
-            try {
-                resp = await request.json<any>(scryfallURI, { throwResponseError: true });
-            } catch (requestException) {
-                throw Error(`failed to load catalog data: failed to load catalog from '${dbFilePath}' (${readException}) and request to scryfall failed with '${requestException}'`);
-            }
 
-            try {
-                fs.writeFileSync(dbFilePath, JSON.stringify(resp));
-            }
-            catch (writeException) {
-                console.log(`failed to write catalog db file: ${writeException}`);
-            }
+        return resp;
+    }
 
-            return resp;
+    // TODO: Add command to manually reload catalog data.
+    async loadCatalog(scryfallURI: string, dbFilePath: vscode.Uri, maxDBAge: number): Promise<any> {
+        let fileStats: vscode.FileStat;
+        try {
+            fileStats = await vscode.workspace.fs.stat(dbFilePath);
+        } catch (statException) {
+            try {
+                const catalogJSON = await this.fetchCatalog(scryfallURI, dbFilePath);
+                return catalogJSON;
+            } catch (fetchException) {
+                throw Error(`catalog does not exist (${statException}) and fetching catalog failed with: ${fetchException}`);
+            }
+        }
+
+        if (fileStats.mtime < Date.now() - maxDBAge) {
+            try {
+                const catalogJSON = await this.fetchCatalog(scryfallURI, dbFilePath);
+                return catalogJSON;
+            } catch (fetchException) {
+                vscode.window.showErrorMessage(`failed to update card db: ${fetchException}`);
+            }
+        }
+
+        const dbFileContent = await vscode.workspace.fs.readFile(dbFilePath);
+        try {
+            return JSON.parse(new TextDecoder().decode(dbFileContent));
+        } catch (jsonException) {
+            throw Error(`failed to parse catalog: ${jsonException}`);
         }
     }
 
     async init(): Promise<any> {
-        const cardNameResp: any = await this.loadCatalog('https://api.scryfall.com/catalog/card-names', path.join(this.dbDirectoryPath, 'card-names.json'), this.maxDBAge);
+        const cardNameResp: any = await this.loadCatalog('https://api.scryfall.com/catalog/card-names', vscode.Uri.joinPath(this.dbDirectoryPath, 'card-names.json'), this.maxDBAge);
         this.cardNames = cardNameResp['data'];
         this.cardNames.forEach((cardName: string) => this.cards.set(cardName, null));
 
-        const artistNamesResp: any = await this.loadCatalog('https://api.scryfall.com/catalog/artist-names', path.join(this.dbDirectoryPath, 'artist-names.json'), this.maxDBAge);
+        const artistNamesResp: any = await this.loadCatalog('https://api.scryfall.com/catalog/artist-names', vscode.Uri.joinPath(this.dbDirectoryPath, 'artist-names.json'), this.maxDBAge);
         this.artistNames = artistNamesResp['data'];
 
-        const creatureTypesResp: any = await this.loadCatalog('https://api.scryfall.com/catalog/creature-types', path.join(this.dbDirectoryPath, 'creature-types.json'), this.maxDBAge);
+        const creatureTypesResp: any = await this.loadCatalog('https://api.scryfall.com/catalog/creature-types', vscode.Uri.joinPath(this.dbDirectoryPath, 'creature-types.json'), this.maxDBAge);
         this.creatureTypes = creatureTypesResp['data'];
 
-        const planeswalkerTypesResp: any = await this.loadCatalog('https://api.scryfall.com/catalog/planeswalker-types', path.join(this.dbDirectoryPath, 'planeswalker-types.json'), this.maxDBAge);
+        const planeswalkerTypesResp: any = await this.loadCatalog('https://api.scryfall.com/catalog/planeswalker-types', vscode.Uri.joinPath(this.dbDirectoryPath, 'planeswalker-types.json'), this.maxDBAge);
         this.planeswalkerTypes = planeswalkerTypesResp['data'];
 
-        const landTypesResp: any = await this.loadCatalog('https://api.scryfall.com/catalog/land-types', path.join(this.dbDirectoryPath, 'land-types.json'), this.maxDBAge);
+        const landTypesResp: any = await this.loadCatalog('https://api.scryfall.com/catalog/land-types', vscode.Uri.joinPath(this.dbDirectoryPath, 'land-types.json'), this.maxDBAge);
         this.landTypes = landTypesResp['data'];
 
-        const artifactTypesResp: any = await this.loadCatalog('https://api.scryfall.com/catalog/artifact-types', path.join(this.dbDirectoryPath, 'artifact-types.json'), this.maxDBAge);
+        const artifactTypesResp: any = await this.loadCatalog('https://api.scryfall.com/catalog/artifact-types', vscode.Uri.joinPath(this.dbDirectoryPath, 'artifact-types.json'), this.maxDBAge);
         this.artifactTypes = artifactTypesResp['data'];
 
-        const enchantmentTypesResp: any = await this.loadCatalog('https://api.scryfall.com/catalog/enchantment-types', path.join(this.dbDirectoryPath, 'enchantment-types.json'), this.maxDBAge);
+        const enchantmentTypesResp: any = await this.loadCatalog('https://api.scryfall.com/catalog/enchantment-types', vscode.Uri.joinPath(this.dbDirectoryPath, 'enchantment-types.json'), this.maxDBAge);
         this.enchantmentTypes = enchantmentTypesResp['data'];
 
-        const spellTypesResp: any = await this.loadCatalog('https://api.scryfall.com/catalog/spell-types', path.join(this.dbDirectoryPath, 'spell-types.json'), this.maxDBAge);
+        const spellTypesResp: any = await this.loadCatalog('https://api.scryfall.com/catalog/spell-types', vscode.Uri.joinPath(this.dbDirectoryPath, 'spell-types.json'), this.maxDBAge);
         this.spellTypes = spellTypesResp['data'];
 
-        const powersResp: any = await this.loadCatalog('https://api.scryfall.com/catalog/powers', path.join(this.dbDirectoryPath, 'powers.json'), this.maxDBAge);
+        const powersResp: any = await this.loadCatalog('https://api.scryfall.com/catalog/powers', vscode.Uri.joinPath(this.dbDirectoryPath, 'powers.json'), this.maxDBAge);
         this.powers = powersResp['data'];
 
-        const toughnessesResp: any = await this.loadCatalog('https://api.scryfall.com/catalog/toughnesses', path.join(this.dbDirectoryPath, 'toughnesses.json'), this.maxDBAge);
+        const toughnessesResp: any = await this.loadCatalog('https://api.scryfall.com/catalog/toughnesses', vscode.Uri.joinPath(this.dbDirectoryPath, 'toughnesses.json'), this.maxDBAge);
         this.toughnesses = toughnessesResp['data'];
 
-        const loyaltiesResp: any = await this.loadCatalog('https://api.scryfall.com/catalog/loyalties', path.join(this.dbDirectoryPath, 'loyalties.json'), this.maxDBAge);
+        const loyaltiesResp: any = await this.loadCatalog('https://api.scryfall.com/catalog/loyalties', vscode.Uri.joinPath(this.dbDirectoryPath, 'loyalties.json'), this.maxDBAge);
         this.loyalties = loyaltiesResp['data'];
 
-        const watermarksResp: any = await this.loadCatalog('https://api.scryfall.com/catalog/watermarks', path.join(this.dbDirectoryPath, 'watermarks.json'), this.maxDBAge);
+        const watermarksResp: any = await this.loadCatalog('https://api.scryfall.com/catalog/watermarks', vscode.Uri.joinPath(this.dbDirectoryPath, 'watermarks.json'), this.maxDBAge);
         this.watermarks = watermarksResp['data'];
 
-        const keywordAbilitiesResp: any = await this.loadCatalog('https://api.scryfall.com/catalog/keyword-abilities', path.join(this.dbDirectoryPath, 'keyword-abilities.json'), this.maxDBAge);
+        const keywordAbilitiesResp: any = await this.loadCatalog('https://api.scryfall.com/catalog/keyword-abilities', vscode.Uri.joinPath(this.dbDirectoryPath, 'keyword-abilities.json'), this.maxDBAge);
         this.keywordAbilities = keywordAbilitiesResp['data'];
 
-        const keywordActionsResp: any = await this.loadCatalog('https://api.scryfall.com/catalog/keyword-actions', path.join(this.dbDirectoryPath, 'keyword-actions.json'), this.maxDBAge);
+        const keywordActionsResp: any = await this.loadCatalog('https://api.scryfall.com/catalog/keyword-actions', vscode.Uri.joinPath(this.dbDirectoryPath, 'keyword-actions.json'), this.maxDBAge);
         this.keywordActions = keywordActionsResp['data'];
 
-        const abilityWordsResp: any = await this.loadCatalog('https://api.scryfall.com/catalog/ability-words', path.join(this.dbDirectoryPath, 'ability-words.json'), this.maxDBAge);
+        const abilityWordsResp: any = await this.loadCatalog('https://api.scryfall.com/catalog/ability-words', vscode.Uri.joinPath(this.dbDirectoryPath, 'ability-words.json'), this.maxDBAge);
         this.abilityWords = abilityWordsResp['data'];
 
-        const setsResp: any = await this.loadCatalog('https://api.scryfall.com/sets', path.join(this.dbDirectoryPath, 'sets.json'), this.maxDBAge);
+        const setsResp: any = await this.loadCatalog('https://api.scryfall.com/sets', vscode.Uri.joinPath(this.dbDirectoryPath, 'sets.json'), this.maxDBAge);
         this.setNames = setsResp['data'].map((set: any) => set['name']);
     }
 

@@ -20,10 +20,10 @@ const languageID: string = 'mtg';
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export async function activate(context: vscode.ExtensionContext) {
-	if (!fs.existsSync('./card_db')) {
-		fs.mkdirSync('./card_db');
-	}
-	var cardDB: CardDB = new CardDB('./card_db');
+	const cardDBPath = vscode.Uri.joinPath(context.globalStorageUri, '/card_db');
+	await vscode.workspace.fs.createDirectory(cardDBPath);
+	
+	var cardDB: CardDB = new CardDB(cardDBPath);
 	await cardDB.isReady;
 
 	context.subscriptions.push(vscode.commands.registerCommand('mtg-code.search-cards', searchCards(cardDB)));
