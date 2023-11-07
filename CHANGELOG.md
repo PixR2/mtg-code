@@ -30,3 +30,11 @@ All notable changes to the "mtg-code" extension will be documented in this file.
 ### Fixed
 - Syntax highlighting for quoted fields.
 - Prevent the extension from breaking in case new fields are added to scryfall's API.
+
+## [1.1.1] - 2023-11-07
+### Added
+- Show total price of cards in euros and usd in selection in the status bar.
+
+### Fixed
+- Syntax highlighting in search lines now works with negation.
+- Local card database is now stored in the global storage URI provided by VSCode.
