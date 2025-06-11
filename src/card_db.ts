@@ -57,7 +57,7 @@ export class CardDB {
             await this.waitForScryfallRateLimit();
             resp = await request.json<any>(scryfallURI, { throwResponseError: true, headers: { 'User-Agent': 'MTGCode/1.1.2' } });
         } catch (requestException) {
-            throw Error(`failed to fetch catalog data: equest to scryfall failed with '${requestException}'`);
+            throw Error(`failed to fetch catalog data: request to scryfall failed with '${requestException}'`);
         }
 
         try {
