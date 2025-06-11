@@ -1,12 +1,9 @@
 import * as request from "web-request";
-import * as fs from 'fs';
-import * as path from 'path';
 import * as fuzzy from 'fuzzy';
 import * as vscode from 'vscode';
 
 import { Card, toCard, toCardFromObject } from "./card";
 import { RulingsResponse, Ruling, toRulingsResponse } from "./card_rulings";
-import { assert } from "console";
 import { TextDecoder, TextEncoder } from "util";
 
 export class CardDB {
