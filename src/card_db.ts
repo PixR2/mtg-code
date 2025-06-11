@@ -11,6 +11,9 @@ export class CardDB {
 
     dbDirectoryPath: vscode.Uri;
     maxDBAge: number = 7 * 24 * 60 * 60 * 1000;
+    scryfallRequestDelay: number = 100;
+
+    nextScryfallRequestTime: number = Date.now();
 
     cardNames: string[] = [];
     artistNames: string[] = [];
@@ -39,9 +42,19 @@ export class CardDB {
         this.isReady = this.init();
     }
 
+    async waitForScryfallRateLimit(): Promise<void> {
+        const now = Date.now();
+        const delay = this.nextScryfallRequestTime - now;
+        this.nextScryfallRequestTime = now + this.scryfallRequestDelay;
+        if (delay > 0) {
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    }
+
     async fetchCatalog(scryfallURI: string, dbFilePath: vscode.Uri): Promise<any> {
         let resp: any;
         try {
+            await this.waitForScryfallRateLimit();
             resp = await request.json<any>(scryfallURI, { throwResponseError: true });
         } catch (requestException) {
             throw Error(`failed to fetch catalog data: equest to scryfall failed with '${requestException}'`);
@@ -147,6 +160,7 @@ export class CardDB {
         if (card === null) {
             var cardJSONStr: string = '';
             try {
+                await this.waitForScryfallRateLimit();
                 const cardResp = await request.get('https://api.scryfall.com/cards/named', { qs: { exact: cardName }, throwResponseError: true });
                 cardJSONStr = cardResp.content;
             }
@@ -181,6 +195,7 @@ export class CardDB {
 
         var searchResp: any = {};
         try {
+            await this.waitForScryfallRateLimit();
             var searchResp = await request.json<any>(`https://api.scryfall.com/cards/search`, {
                 qs: {
                     q: searchStr
@@ -399,6 +414,7 @@ export class CardDB {
 
         var rulingsRespJSONStr: string = '';
         try {
+            await this.waitForScryfallRateLimit();
             const rulingsResp = await request.get(card.rulingsURI, { throwResponseError: true });
             rulingsRespJSONStr = rulingsResp.content;
         }
