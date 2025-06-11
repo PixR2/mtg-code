@@ -55,7 +55,7 @@ export class CardDB {
         let resp: any;
         try {
             await this.waitForScryfallRateLimit();
-            resp = await request.json<any>(scryfallURI, { throwResponseError: true });
+            resp = await request.json<any>(scryfallURI, { throwResponseError: true, headers: { 'User-Agent': 'MTGCode/1.1.2' } });
         } catch (requestException) {
             throw Error(`failed to fetch catalog data: equest to scryfall failed with '${requestException}'`);
         }
@@ -161,7 +161,7 @@ export class CardDB {
             var cardJSONStr: string = '';
             try {
                 await this.waitForScryfallRateLimit();
-                const cardResp = await request.get('https://api.scryfall.com/cards/named', { qs: { exact: cardName }, throwResponseError: true });
+                const cardResp = await request.get('https://api.scryfall.com/cards/named', { qs: { exact: cardName }, throwResponseError: true, headers: { 'User-Agent': 'MTGCode/1.1.2' } });
                 cardJSONStr = cardResp.content;
             }
             catch (e) {
@@ -200,7 +200,8 @@ export class CardDB {
                 qs: {
                     q: searchStr
                 },
-                throwResponseError: true
+                throwResponseError: true,
+                headers: { 'User-Agent': 'MTGCode/1.1.2' }
             });
         }
         catch (e) {
@@ -415,7 +416,7 @@ export class CardDB {
         var rulingsRespJSONStr: string = '';
         try {
             await this.waitForScryfallRateLimit();
-            const rulingsResp = await request.get(card.rulingsURI, { throwResponseError: true });
+            const rulingsResp = await request.get(card.rulingsURI, { throwResponseError: true, headers: { 'User-Agent': 'MTGCode/1.1.2' } });
             rulingsRespJSONStr = rulingsResp.content;
         }
         catch (e) {
