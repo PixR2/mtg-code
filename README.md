@@ -13,13 +13,11 @@ This is an extension for building Magic the Gathering decks in VSCode.
 
 ## Known Issues
 
-## Release Notes
+## [Change Log](CHANGELOG.md)
 
-### 1.0.0
-
-Initial release of the mtg-code extension. Includes:
-* Syntax Highlighting
-* Autocompletion for card names.
-* Card preview on hover.
-* Card search as CodeLens with syntax highlighting and autocompletion.
-* Card counting when selecting card lines.
+- [1.0.0](CHANGELOG.md#100---2022-02-28)
+- [1.0.1](CHANGELOG.md#101---2022-04-22)
+- [1.0.2](CHANGELOG.md#102---2022-04-22)
+- [1.1.0](CHANGELOG.md#110---2023-03-04)
+- [1.1.1](CHANGELOG.md#111---2023-11-07)
+- [1.1.2](CHANGELOG.md#112---2025-06-11)

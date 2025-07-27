@@ -38,3 +38,10 @@ All notable changes to the "mtg-code" extension will be documented in this file.
 ### Fixed
 - Syntax highlighting in search lines now works with negation.
 - Local card database is now stored in the global storage URI provided by VSCode.
+
+## [1.1.2] - 2025-06-11
+### Added
+- Rate limiting for scryfall API requests to adhere to their guidelines.
+
+### Fixed
+- Send 'User-Agent' header in all requests to Scryfall API to comply with their requirements.
