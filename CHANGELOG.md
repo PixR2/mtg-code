@@ -45,3 +45,10 @@ All notable changes to the "mtg-code" extension will be documented in this file.
 
 ### Fixed
 - Send 'User-Agent' header in all requests to Scryfall API to comply with their requirements.
+
+## [1.1.3] - 2026-08-30
+### Added
+- Batch fetching of cards for decorators to improve performance and reduce API calls.
+
+### Fixed
+- Send 'Accept' header in all requests to Scryfall API to comply with their requirements.

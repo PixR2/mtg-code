@@ -21,3 +21,4 @@ This is an extension for building Magic the Gathering decks in VSCode.
 - [1.1.0](CHANGELOG.md#110---2023-03-04)
 - [1.1.1](CHANGELOG.md#111---2023-11-07)
 - [1.1.2](CHANGELOG.md#112---2025-06-11)
+- [1.1.3](CHANGELOG.md#113---2026-08-30)
