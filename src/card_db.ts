@@ -55,7 +55,7 @@ export class CardDB {
         let resp: any;
         try {
             await this.waitForScryfallRateLimit();
-            resp = await request.json<any>(scryfallURI, { throwResponseError: true, headers: { 'User-Agent': 'MTGCode/1.1.2' } });
+            resp = await request.json<any>(scryfallURI, { throwResponseError: true, headers: { 'User-Agent': 'MTGCode/1.1.3', 'Accept': '*/*' } });
         } catch (requestException) {
             throw Error(`failed to fetch catalog data: request to scryfall failed with '${requestException}'`);
         }
@@ -161,7 +161,7 @@ export class CardDB {
             var cardJSONStr: string = '';
             try {
                 await this.waitForScryfallRateLimit();
-                const cardResp = await request.get('https://api.scryfall.com/cards/named', { qs: { exact: cardName }, throwResponseError: true, headers: { 'User-Agent': 'MTGCode/1.1.2' } });
+                const cardResp = await request.get('https://api.scryfall.com/cards/named', { qs: { exact: cardName }, throwResponseError: true, headers: { 'User-Agent': 'MTGCode/1.1.3', 'Accept': '*/*' } });
                 cardJSONStr = cardResp.content;
             }
             catch (e) {
@@ -201,7 +201,7 @@ export class CardDB {
                     q: searchStr
                 },
                 throwResponseError: true,
-                headers: { 'User-Agent': 'MTGCode/1.1.2' }
+                headers: { 'User-Agent': 'MTGCode/1.1.3', 'Accept': '*/*' }
             });
         }
         catch (e) {
@@ -416,7 +416,7 @@ export class CardDB {
         var rulingsRespJSONStr: string = '';
         try {
             await this.waitForScryfallRateLimit();
-            const rulingsResp = await request.get(card.rulingsURI, { throwResponseError: true, headers: { 'User-Agent': 'MTGCode/1.1.2' } });
+            const rulingsResp = await request.get(card.rulingsURI, { throwResponseError: true, headers: { 'User-Agent': 'MTGCode/1.1.3', 'Accept': '*/*' } });
             rulingsRespJSONStr = rulingsResp.content;
         }
         catch (e) {
