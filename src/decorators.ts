@@ -15,6 +15,18 @@ export async function setCardDecorations(editor: vscode.TextEditor, cardDB: Card
         let decorations: vscode.DecorationOptions[] = [];
 
         const lines: string[] = editor.document.getText().split(lineSplitterRegExp);
+        // First collect all card names in the document, so we can fetch them from the database in one go using `getCards()`.
+        let cardNames: string[] = [];
+        for (const line of lines) {
+            const search = cardLineRegExp.exec(line);
+            if (search && search.length === 3) {
+                cardNames.push(search[2]);
+            }
+        }
+
+        // This caches the cards in the cardDB, so that we don't have to fetch them one by one later.
+        await cardDB.getCards(cardNames);
+
         for (const [lineNum, line] of lines.entries()) {
             progress.report({
                 increment: (lineNum / lines.length) * 100.0

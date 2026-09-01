@@ -11,7 +11,7 @@ export class CardDB {
 
     dbDirectoryPath: vscode.Uri;
     maxDBAge: number = 7 * 24 * 60 * 60 * 1000;
-    scryfallRequestDelay: number = 100;
+    scryfallRequestDelay: number = 500;
 
     nextScryfallRequestTime: number = Date.now();
 
@@ -181,6 +181,95 @@ export class CardDB {
         }
 
         return card;
+    }
+
+    async getCards(cardNames: string[]): Promise<Card[]> {
+        // Use the `POST https://api.scryfall.com/cards/collection` endpoint to fetch multiple cards at once.
+        // Body: { identifiers: [{ name: "Card Name 1" }, { name: "Card Name 2" }, ...] }
+        // Response:
+        // {
+        //   "object": "list",
+        //   "not_found": [],
+        //   "data": [...]
+        // }
+        //  Note: The maximum number of cards that can be fetched in a single request is 75.
+        //  We will need to split the cardNames array into chunks of 75 and make multiple requests if necessary.
+
+        // But first check the cache for any cards that are already loaded, and only fetch the ones that are not in the cache.
+        const cardsToFetch = cardNames.filter(name => !this.cards.has(name) || this.cards.get(name) === null);
+        const cachedCards = cardNames.filter(name => this.cards.has(name) && this.cards.get(name) !== null).map(name => this.cards.get(name) as Card);
+
+        if (cardsToFetch.length === 0) {
+            return cachedCards;
+        }
+
+        const identifiers = cardsToFetch.map(name => ({ name }));
+
+        // Split the identifiers into chunks of 75
+        const chunks = [];
+        for (let i = 0; i < identifiers.length; i += 75) {
+            chunks.push(identifiers.slice(i, i + 75));
+        }
+
+        // Fetch each chunk of identifiers and combine the results
+        const newCards: Card[] = [];
+        for (const chunk of chunks) {
+            const chunkCards = await this.fetchCardsChunk(chunk);
+            newCards.push(...chunkCards);
+        }
+
+        return cachedCards.concat(newCards);
+    }
+
+    private async fetchCardsChunk(identifiers: { name: string }[]): Promise<Card[]> {
+        var cardsRespJSONStr: string = '';
+        try {
+            await this.waitForScryfallRateLimit();
+            const cardsResp = await request.post('https://api.scryfall.com/cards/collection', {
+                body: JSON.stringify({ identifiers }),
+                throwResponseError: true,
+                headers: { 'User-Agent': 'MTGCode/1.1.3', 'Accept': '*/*', 'Content-Type': 'application/json' }
+            });
+            cardsRespJSONStr = cardsResp.content;
+        }
+        catch (e) {
+            throw Error(`request to scryfall api failed: ${e}`);
+        }
+
+        var parsedCardsResp: any;
+        try {
+            parsedCardsResp = JSON.parse(cardsRespJSONStr);
+        }
+        catch (e) {
+            throw Error(`failed to parse cards information from scryfall api: ${e}\n\nJSON String:\n\n${cardsRespJSONStr}`);
+        }
+
+        if (parsedCardsResp['data'] === undefined) {
+            throw Error(`request to scryfall api failed: no 'data' field in json`);
+        }
+
+        const newCards: Card[] = parsedCardsResp['data'].map((cardJSON: any) => {
+            let card: Card;
+            try {
+                card = toCardFromObject(cardJSON);
+                if (card.name === undefined) {
+                    return null;
+                }
+                this.cards.set(card.name, card);
+                return card;
+            }
+            catch (e) {
+                throw Error(`failed to convert json object to card: ${e}\n\nJSON Object:\n\n${JSON.stringify(cardJSON)}`);
+            }
+        }).filter((card: Card | null): card is Card => card !== null);
+
+        newCards.forEach((card: Card) => {
+            if (card.name !== undefined) {
+                this.cards.set(card.name, card);
+            }
+        });
+
+        return newCards;
     }
 
     searchCardNamesFuzzy(searchStr: string): fuzzy.FilterResult<string>[] {
